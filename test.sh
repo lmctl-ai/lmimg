@@ -36,7 +36,7 @@ GEN=""; if [ ! -f "$BUILD_DIR/CMakeCache.txt" ] && command -v ninja >/dev/null 2
 ok "static release build"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
 ok "native pixel, codec and image mathematics oracles"
-[ "$("$HOST" --version)" = 'lmimg 0.1.0' ] || fail version
+[ "$("$HOST" --version)" = 'lmimg 0.1.1' ] || fail version
 ok "exact version"
 cp schema/lmimg.dsl.json "$WORK/schema"
 scripts/gen-schema.py >/dev/null
@@ -99,6 +99,74 @@ expect_error opacity 'let a=img.canvas(2,2,1.0,1.0,1.0,1.0); a.blend(a,"over",2.
 expect_error nonfinite 'let a=img.pattern(2,2,"sqrt(-1)","0","0","1");' 'finite'
 expect_error tilt_kernel 'let a=img.canvas(2,2,1.0,0.0,0.0,1.0); a.tilt_shift(img.eval("1e308"),0.25,0.75);' 'radius'
 ok "fifteen error paths report exit 3, JSON and one stderr diagnostic"
+
+# Independent-review repros stay explicit rather than relying only on gallery runs.
+review_run(){
+ compile_snippet "review_$1" "$2"
+ "$TIMEOUT" 60 "$HOST" --dsl "$WORK/review_$1.dslb" >"$WORK/review_$1.out" 2>"$WORK/review_$1.err" || { cat "$WORK/review_$1.out" "$WORK/review_$1.err"; fail "review $1"; }
+ grep -q '"ok": true' "$WORK/review_$1.out" || fail "review $1 result"
+ ok "review $1: $3"
+}
+review_run M1 'let row=img.canvas(9,1,0.0,0.0,0.0,1.0); row.set_pixel(4,0,1.0,1.0,1.0,1.0).tilt_shift(2.0,0.0,1.0); img.assert_close(row.pixel(4,0,0),1.0,0.001); img.print("center="+str(row.pixel(4,0,0)));' 'one-row focus band preserves its white impulse'
+review_run M2 'let a=img.canvas(1,1,0.2,0.4,0.6,1.0); let b=img.canvas(1,1,0.6,0.3,0.2,1.0); let c=a.copy().blend(b,"overlay",1.0,0,0); img.assert_close(c.pixel(0,0,0),0.24,0.01); let d=img.layers(1,1).add(a,"over",1.0,0,0).add(b,"difference",1.0,0,0).render(); img.assert_close(d.pixel(0,0,0),0.4,0.01);' 'overlay and layer difference match numerical answers'
+review_run M3 'let a=img.canvas(3,2,1.0,0.0,0.0,1.0).selection(1,0,1,1); img.assert_close(a.pixel(1,0,3),1.0,0.001); img.assert_close(a.pixel(0,0,3),0.0,0.001); img.assert_close(a.pixel(1,1,3),0.0,0.001);' 'documented rectangle selection clips exactly its bounds'
+review_run m1 'let a=img.canvas(1,1,1.0,1.0,1.0,1.0).morphology("median",16); img.assert_close(a.pixel(0,0,0),1.0,0.001);' 'morphology accepts the shared maximum radius 16'
+expect_error review_m1_bound 'let a=img.canvas(1,1,1.0,1.0,1.0,1.0).morphology("median",17);' 'range'
+printf 'P1\n1 1\n0\n' >"$WORK/input.pbm"
+review_run m2 "let a=img.open(\"$WORK/input.pbm\"); img.assert_close(a.pixel(0,0,0),1.0,0.001); a.save(\"$WORK/output.pbm\");" 'PBM input and output are reachable'
+review_run m3 "let a=img.canvas(1,1,1.0,0.0,0.0,1.0); a.save(\"$WORK/output.pgm\"); a.save(\"$WORK/output.ppm\"); let b=img.open(\"$WORK/output.pgm\"); img.assert_close(b.pixel(0,0,0),0.2126,0.01);" 'PGM converts color pixels to grayscale'
+python3 - "$WORK" <<'PY'
+from pathlib import Path
+import sys
+p=Path(sys.argv[1])
+for name,magic in [('output.pbm',b'P4'),('output.pgm',b'P5'),('output.ppm',b'P6')]:
+ assert (p/name).read_bytes().startswith(magic),(name,magic)
+PY
+review_run m4 'let a=img.canvas(96,40,0.0,0.0,0.0,0.0); let b=a.copy(); a.text(1.0,28.0,"Ink",24.0,2.0,-1.0,0.5,2.0); b.text(1.0,28.0,"Ink",24.0,1.0,0.0,0.5,1.0); img.assert_close(a.ssim(b),1.0,0.000001);' 'text clips ink and alpha before source-over compositing'
+expect_error review_m5 'let a=img.open("missing-review-image.png");' 'cannot open image file'
+if grep -q 'filesystem error' "$WORK/review_m5.out"; then fail 'raw filesystem wording'; fi
+ok 'review m5: missing images have a concise host diagnostic'
+review_run m6 "let a=img.canvas(1,1,1.0,0.0,0.0,1.0); let b=img.canvas(1,1,0.0,1.0,0.0,1.0); img.animation().add(a,8).add(b,8).save(\"$WORK/first-frame.gif\"); let first=img.open(\"$WORK/first-frame.gif\"); img.assert_close(first.pixel(0,0,0),1.0,0.001);" 'animated inputs retain the explicitly supported first frame'
+python3 - <<'PY'
+from pathlib import Path
+notices=Path('THIRD_PARTY_NOTICES').read_text()
+assert Path('third_party/libwebp/PATENTS').read_text() in notices
+assert 'not compiled or linked' in notices
+PY
+ok 'review m7: full WebP patent grant and excluded-source disclosure are embedded'
+python3 - <<'PY'
+from pathlib import Path
+s=Path('README.md').read_text()
+for token in ['rectangular','heal','width()','height()','set_pixel','img.curve().point','Layers.masked','Layers.render','Montage.render','Animation.size','img.eval','img.assert_close','img.assert_true','img.print']:
+ assert token in s,token
+PY
+ok 'review m9: README names selections and the omitted API/builders'
+python3 tests/check-vm-operands.py "$HOST"
+ok 'review m10: malformed while/range operand kinds return run errors'
+python3 - <<'PY'
+from pathlib import Path
+s=Path('THIRD_PARTY_NOTICES').read_text()
+assert Path('LICENSE').read_text() in s
+assert 'Host source/build recipes: https://github.com/lmctl-ai/lmimg' in s
+assert 'GNU LESSER GENERAL PUBLIC LICENSE' in s and 'GCC Runtime Library Exception' in s
+PY
+ok 'review m11: runtime terms and source/relink recipe pointers remain present'
+if [ "${LMIMG_TEST_NETWORK:-0}" = 1 ]; then
+ # Remove the build directory prepended above: this must use release installation.
+ AUTORUN_PATH="${PATH#*:}"
+ if PATH="$AUTORUN_PATH" command -v lmimg >/dev/null 2>&1; then fail 'public autorun must not find lmimg on PATH'; fi
+ mkdir -p "$WORK/public-autorun"
+ (cd "$WORK/public-autorun"; PATH="$AUTORUN_PATH" LMSCRIPT_TOOL_CACHE="$WORK/release-cache" "$TIMEOUT" 300 lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms) >"$WORK/public-autorun.log" 2>&1 || { cat "$WORK/public-autorun.log"; fail 'public release autorun'; }
+ python3 - "$WORK/public-autorun/images/gradient_studio.png" <<'PY'
+from pathlib import Path
+import struct,sys
+b=Path(sys.argv[1]).read_bytes()
+assert b[:8]==b'\x89PNG\r\n\x1a\n' and struct.unpack('>II',b[16:24])==(900,520)
+PY
+ ok 'reviews C1/m8: LMIMG_TEST_NETWORK gates a real empty-directory public autorun'
+else
+ echo 'skip public-release autorun: set LMIMG_TEST_NETWORK=1 to enable the network check'
+fi
 compile_snippet runaway 'for (i in range(0,1000000)) { let im=img.canvas(1024,1024,0.0,0.0,0.0,1.0); }'
 set +e
 LMIMG_MAX_MEMORY_MB=64 "$TIMEOUT" 90 "$HOST" --dsl "$WORK/runaway.dslb" >"$WORK/memory.out" 2>"$WORK/memory.err"; code=$?

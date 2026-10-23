@@ -15,7 +15,7 @@ Install [lmctl](https://github.com/lmctl-ai/lmctl), then copy any caption above 
 lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms
 ```
 
-The [v0.1.0 release](https://github.com/lmctl-ai/lmimg/releases/tag/v0.1.0) provides static binaries for Linux x64/arm64, macOS arm64/x64, and Windows x64. macOS uses system libraries. No ImageMagick installation, font directory, or codec DLL is needed.
+The [v0.1.1 release](https://github.com/lmctl-ai/lmimg/releases/tag/v0.1.1) provides static binaries for Linux x64/arm64, macOS arm64/x64, and Windows x64. macOS uses system libraries. No ImageMagick installation, font directory, or codec DLL is needed.
 
 ```lms
 p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
@@ -46,6 +46,18 @@ All image edits mutate their receiver and return it for chaining. Use `copy()` b
 | Measurements | `pixel`, `mean`, `stddev`, `min`, `max`, `histogram`, `psnr`, `ssim` |
 | Contact sheets / GIF | `img.panel(a,b,gap)`, `img.animation().add(frame,delay).save(path)` |
 | Utilities | `img.eval(expression)`, `img.assert_true`, `img.assert_close`, `metadata(key,value)`, `property(key)` |
+
+Selections are rectangular: `selection(x,y,w,h)` clears alpha outside that rectangle.
+For other shapes, build an image mask and apply `mask`. Blend and layer modes are
+`over`, `multiply`, `screen`, `overlay`, `difference`, `darken`, `lighten`,
+`addition` (clipped sum), and `subtract` (clipped backdrop minus source).
+Morphology radii are 0–16.
+
+Builder chains include `img.curve().point(x,y)`, `img.layers(w,h).add(...)`,
+`Layers.masked(...)` and `Layers.render()`, `img.montage().add(...)` and
+`Montage.render(columns,gap)`, and `img.animation().add(...)`, `Animation.size()`
+and `Animation.save(path)`. `img.print(value)` writes a diagnostic result.
+Use the signatures query for the exact typed arguments to each builder.
 
 `lmimg --dsl-signatures` lists exact parameter types and overloads; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM are supported local raster formats. Animated output is GIF; delays are centiseconds. `open` reads the first frame of an animated input. Text supports ASCII through the embedded Roboto font. Comparison requires equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM uses one global luma window with sample covariance and constants 0.01² and 0.03²; it is a compact image statistic rather than a multiscale perceptual model.
 

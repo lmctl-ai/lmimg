@@ -1,4 +1,4 @@
-#include "dslvm.hpp"
+#include "lmimg_dslvm.hpp"
 #include "expr.hpp"
 #include "image.hpp"
 #include "memory_budget.hpp"

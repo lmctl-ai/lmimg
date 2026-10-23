@@ -406,7 +406,7 @@ void Image::save(const std::string &path, const std::string &format) const {
     fail(impl_->wand, "clone");
   ok(MagickSetFormat(p.get(), format.c_str()), p.get(), "set format");
   if (format == "PGM" || format == "PBM")
-    ok(MagickSetImageColorspace(p.get(), GRAYColorspace), p.get(),
+    ok(MagickTransformImageColorspace(p.get(), GRAYColorspace), p.get(),
        "set grayscale format");
   ok(MagickSetOption(p.get(), "png:exclude-chunks", "date,time"), p.get(),
      "stable PNG metadata");
