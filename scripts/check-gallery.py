@@ -46,6 +46,8 @@ def main() -> int:
         width, height = png_size(path)
         if (width, height) != (900, 520):
             raise SystemExit(f"{path} must be 900x520 ({width}x{height})")
+        if args.generated and path.stat().st_mtime < (ROOT / "examples" / f"{name}.lms").stat().st_mtime:
+            raise SystemExit(f"{path} is older than its example source")
     gif = gallery / "animation_wave.gif"
     if not gif.is_file():
         raise SystemExit("missing animation_wave.gif")
@@ -54,6 +56,8 @@ def main() -> int:
     width, height = gif_size(gif)
     if width <= 0 or height <= 0:
         raise SystemExit(f"{gif} has invalid dimensions ({width}x{height})")
+    if args.generated and gif.stat().st_mtime < (ROOT / "examples" / "animation_wave.lms").stat().st_mtime:
+        raise SystemExit(f"{gif} is older than its example source")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for name in examples:
         url = f"https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/{name}.lms"
