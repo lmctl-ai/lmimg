@@ -8,3 +8,6 @@
 - No GUI, interactive shell, device capture, or project-file editor is included.
 
 - Text currently accepts ASCII only. Raster `open` reads the first frame of animated input; GIF output is built explicitly with `img.animation()`.
+
+- Built-in selections are rectangular. Use a procedural image mask for other silhouettes; there is no free-form selection editor.
+- Image input must remain unchanged during `open`: header inspection and first-frame decoding are not an atomic snapshot. Dimensions are checked both before and after decoding, and the memory policy still applies.

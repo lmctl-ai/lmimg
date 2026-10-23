@@ -9,7 +9,6 @@ regression-tested independently of the compiler.
 from __future__ import annotations
 
 import hashlib
-import os
 import struct
 import subprocess
 import sys
@@ -56,12 +55,12 @@ def while_with_int_condition(schema: bytes) -> bytes:
     return bytecode(schema, [], [], bytes(code))
 
 
-def for_range_with_strings(schema: bytes) -> bytes:
+def for_range_with_strings(schema: bytes, bad_begin: bool, bad_finish: bool) -> bytes:
     # FOR_RANGE requires two hidden int locals, but the stack supplies strings.
     # The runtime must reject those values before reading their integer fields.
     constants = ["int", "begin", "end"]
-    code = bytearray(b"\x02" + u32(1))
-    code += b"\x02" + u32(2)
+    code = bytearray(b"\x02" + u32(1) if bad_begin else b"\x01" + struct.pack(">q", 0))
+    code += b"\x02" + u32(2) if bad_finish else b"\x01" + struct.pack(">q", 1)
     code += b"\x2f" + u16(0) + u16(1) + i32(7)  # exit after FOR_NEXT
     code += b"\x31" + u16(1) + i32(-7)             # back to FOR_RANGE body
     code += b"\x11"
@@ -69,7 +68,7 @@ def for_range_with_strings(schema: bytes) -> bytes:
 
 
 def run(host: Path, payload: bytes, expected: str, directory: Path) -> None:
-    path = directory / (expected + ".ds l b").replace(" ", "")
+    path = directory / "malformed-loop.dslb"
     path.write_bytes(payload)
     result = subprocess.run([str(host), "--dsl", str(path)], text=True, capture_output=True, timeout=30)
     if result.returncode != 3:
@@ -88,7 +87,9 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="lmimg-vm-operands-") as temp:
         directory = Path(temp)
         run(host, while_with_int_condition(schema), "condition must be bool", directory)
-        run(host, for_range_with_strings(schema), "FOR_RANGE operands must be int", directory)
+        run(host, for_range_with_strings(schema, True, False), "FOR_RANGE operands must be int", directory)
+        run(host, for_range_with_strings(schema, False, True), "FOR_RANGE operands must be int", directory)
+        run(host, for_range_with_strings(schema, True, True), "FOR_RANGE operands must be int", directory)
     print("malformed loop operands rejected")
     return 0
 

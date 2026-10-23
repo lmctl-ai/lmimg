@@ -15,3 +15,19 @@ and byte-identical reruns for deterministic images. Native scientific tests
 cover pixel geometry, color transforms, blur behavior, blend compositing,
 statistics, histogram output, PSNR/SSIM, codec round trips, text bounds,
 montage geometry, and GIF animation.
+
+## v0.1.1 user workflows
+
+Five additional self-contained examples bring the gallery to 13 PNGs plus GIF:
+
+- `procedural_photo`: smoothly shaded procedural product/fruit study with
+  deterministic texture, exposure/contrast, white balance, vignette and unsharp.
+- `watermark_story`: translucent embedded-font watermark on original artwork.
+- `batch_resize`: three named deliverables preserve the original 3:4 aspect ratio
+  at 180×240, 210×280 and 240×320, with a labeled comparison sheet.
+- `before_after_panels`: source and delivery grade side by side.
+- `contact_sheet_story`: labeled warm/cool/gold/violet catalogue variants.
+
+Every README image has a raw-URL `lmctl autorun` caption. `test.sh` additionally
+uses `LMIMG_TEST_NETWORK=1` to verify a public caption from an empty directory
+with the build host removed from PATH; CI enables this integration check.
