@@ -2,6 +2,10 @@
 
 Image editing, compositing and procedural graphics from scripts: a static ImageMagick core with original GIMP-style layers, masks, curves, healing and LUTs. Every picture below is produced by the one-line command under it, from an empty directory, with no photographs or extra files.
 
+[![CI](https://github.com/lmctl-ai/lmimg/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmimg/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmimg?label=release)](https://github.com/lmctl-ai/lmimg/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 ### Photo retouching and looks
 
 | | |
