@@ -251,6 +251,17 @@ int main(int argc, char **argv) {
     check(lettering.stats().mean.g > lettering.stats().mean.r &&
               lettering.stats().mean.b > lettering.stats().mean.r,
           "embedded text preserves green and blue channels");
+    Img clipped_text = Img::create(48, 32, {0.2, 0.3, 0.4, 1});
+    Img reference_text = clipped_text.clone();
+    clipped_text.text(2, 24, "A", 18, {2, -1, 0.5, 2});
+    reference_text.text(2, 24, "A", 18, {1, 0, 0.5, 1});
+    check(clipped_text.ssim(reference_text) > 1.0 - 1e-12,
+          "text clips out-of-range color and alpha");
+    Img transparent_text = reference_text.clone();
+    Img transparent_background = reference_text.clone();
+    transparent_text.text(2, 24, "A", 18, {1, 0, 0.5, -1});
+    check(transparent_text.ssim(transparent_background) > 1.0 - 1e-12,
+          "text clips negative alpha to transparent");
 
     codec_roundtrip(ramp, dir, "PNG", "png");
     codec_roundtrip(ramp, dir, "JPEG", "jpg");
