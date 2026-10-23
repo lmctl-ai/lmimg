@@ -16,13 +16,10 @@ endif()
 # at these static archives through pkg-config; no host codec or runtime module
 # is used by the resulting executable.
 set(CODEC_PREFIX "${CMAKE_BINARY_DIR}/codec-prefix")
-# Include zlib's future install location even on a completely clean build.
-# Testing EXISTS here runs before zlib is installed and silently omits it in CI.
-if(WIN32)
-  set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig;${CODEC_PREFIX}/share/pkgconfig")
-else()
-  set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig:${CODEC_PREFIX}/share/pkgconfig")
-endif()
+# Keep every generated .pc file in one directory. This avoids platform-specific
+# path-list parsing in native pkg-config on Windows (where ':' is a drive
+# separator and ';' is the list separator).
+set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/codec-build")
 function(build_codec name source opts)
   set(dir "${CMAKE_BINARY_DIR}/codec-build/${name}")
@@ -63,6 +60,13 @@ if(WIN32)
 else()
   set(CODEC_ZLIB "${CODEC_PREFIX}/lib/libz.a")
 endif()
+set(ZLIB_PC_SOURCE "${CODEC_PREFIX}/share/pkgconfig/zlib.pc")
+set(ZLIB_PC_TARGET "${CODEC_PREFIX}/lib/pkgconfig/zlib.pc")
+if(NOT EXISTS "${ZLIB_PC_SOURCE}")
+  message(FATAL_ERROR "zlib pkg-config metadata missing: ${ZLIB_PC_SOURCE}")
+endif()
+file(MAKE_DIRECTORY "${CODEC_PREFIX}/lib/pkgconfig")
+file(COPY_FILE "${ZLIB_PC_SOURCE}" "${ZLIB_PC_TARGET}" ONLY_IF_DIFFERENT)
 build_codec(libpng libpng "-DPNG_TESTS=OFF;-DPNG_SHARED=OFF;-DPNG_STATIC=ON;-DCMAKE_PREFIX_PATH=${CODEC_PREFIX}")
 build_codec(libjpeg-turbo libjpeg-turbo "-DENABLE_SHARED=OFF;-DENABLE_STATIC=ON;-DWITH_TESTS=OFF;-DWITH_12BIT=OFF;-DWITH_16BIT=OFF")
 build_codec(libtiff libtiff "-Dtiff-tests=OFF;-Djbig=OFF;-Dlerc=OFF;-Dlzma=OFF;-Dzstd=OFF;-Dlibdeflate=OFF;-DCMAKE_PREFIX_PATH=${CODEC_PREFIX}")
