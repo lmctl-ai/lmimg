@@ -174,7 +174,10 @@ if(WIN32)
   if(NOT IM_CYGPATH_SHIM_RESULT EQUAL 0 OR NOT IM_MINGW_STAT_SHIM)
     message(FATAL_ERROR "cygpath could not translate the MinGW stat compatibility shim")
   endif()
-  set(IM_CFLAGS "-include${IM_MINGW_STAT_SHIM}")
+  # This flag is consumed by the native MinGW compiler. Keep its native
+  # forward-slash drive path; a /d/... MSYS path is not a valid include path
+  # when the compiler is launched from Autoconf.
+  set(IM_CFLAGS "-include${IM_MINGW_STAT_SHIM_NATIVE}")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/static-codec-pkg-config.sh.in"
     "${IM_PKG_CONFIG_NATIVE}" @ONLY)
   file(CHMOD "${IM_PKG_CONFIG_NATIVE}"
@@ -200,10 +203,23 @@ if(WIN32 AND DEFINED LMIMG_MSYS2_USR_BIN)
   # Keep Autoconf, expr, sed, make, and the shell in one MSYS2 installation.
   # Git Bash utilities earlier on PATH can otherwise change Autoconf's option
   # parsing while the configure script is running under MSYS2 bash.
-  set(ENV{PATH} "${LMIMG_MSYS2_USR_BIN};$ENV{PATH}")
+  get_filename_component(IM_NATIVE_COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${IM_NATIVE_COMPILER_DIR}"
+    OUTPUT_VARIABLE IM_NATIVE_COMPILER_DIR_BASH OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_COMPILER_RESULT)
+  if(NOT IM_CYGPATH_COMPILER_RESULT EQUAL 0 OR NOT IM_NATIVE_COMPILER_DIR_BASH)
+    message(FATAL_ERROR "cygpath could not translate the native compiler directory")
+  endif()
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${CMAKE_C_COMPILER}"
+    OUTPUT_VARIABLE IM_NATIVE_COMPILER_BASH OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_CC_RESULT)
+  if(NOT IM_CYGPATH_CC_RESULT EQUAL 0 OR NOT IM_NATIVE_COMPILER_BASH)
+    message(FATAL_ERROR "cygpath could not translate the native C compiler")
+  endif()
+  set(ENV{PATH} "${LMIMG_MSYS2_USR_BIN};${IM_NATIVE_COMPILER_DIR_BASH};$ENV{PATH}")
   set(ENV{CONFIG_SHELL} "${IM_BASH_COMMAND}")
   set(ENV{SHELL} "${IM_BASH_COMMAND}")
-  set(ENV{CC} "${CMAKE_C_COMPILER}")
+  set(ENV{CC} "${IM_NATIVE_COMPILER_BASH}")
   set(ENV{CXX} "${CMAKE_CXX_COMPILER}")
   message(STATUS "Windows ImageMagick POSIX tools: ${LMIMG_MSYS2_USR_BIN}")
 endif()
@@ -230,6 +246,17 @@ execute_process(
   WORKING_DIRECTORY "${IM_BUILD}"
   RESULT_VARIABLE IM_CONFIGURE_RESULT)
 if(NOT IM_CONFIGURE_RESULT EQUAL 0)
+  set(IM_CONFIG_LOG "${IM_BUILD}/config.log")
+  if(EXISTS "${IM_CONFIG_LOG}")
+    file(READ "${IM_CONFIG_LOG}" IM_CONFIG_LOG_TEXT)
+    string(LENGTH "${IM_CONFIG_LOG_TEXT}" IM_CONFIG_LOG_LENGTH)
+    math(EXPR IM_CONFIG_LOG_START "${IM_CONFIG_LOG_LENGTH} - 12000")
+    if(IM_CONFIG_LOG_START LESS 0)
+      set(IM_CONFIG_LOG_START 0)
+    endif()
+    string(SUBSTRING "${IM_CONFIG_LOG_TEXT}" ${IM_CONFIG_LOG_START} -1 IM_CONFIG_LOG_TAIL)
+    message(FATAL_ERROR "ImageMagick configure failed (${IM_CONFIGURE_RESULT}); config.log tail:\n${IM_CONFIG_LOG_TAIL}")
+  endif()
   message(FATAL_ERROR "ImageMagick configure failed (${IM_CONFIGURE_RESULT})")
 endif()
 file(WRITE "${IM_CONFIGURED}" "${IM_CONFIG_KEY}\n")
