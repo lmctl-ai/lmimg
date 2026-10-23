@@ -266,7 +266,9 @@ endforeach()
 string(REGEX MATCHALL "#define[ \t]+([A-Z0-9_]+)_DELEGATE[ \t]+1" IM_DELEGATE_LINES "${IM_CONFIG_TEXT}")
 foreach(line ${IM_DELEGATE_LINES})
   string(REGEX REPLACE "#define[ \t]+([A-Z0-9_]+)_DELEGATE[ \t]+1" "\\1" delegate "${line}")
-  if(NOT delegate MATCHES "^(PNG|JPEG|TIFF|WEBP|WEBPMUX|ZLIB)$")
+  # WINGDI32 is the Windows GDI system library (OS component, no license
+  # obligation), always detected by MinGW builds.
+  if(NOT delegate MATCHES "^(PNG|JPEG|TIFF|WEBP|WEBPMUX|ZLIB|WINGDI32)$")
     message(FATAL_ERROR "ImageMagick picked up an unexpected delegate on this host: ${delegate}. Only PNG, JPEG, TIFF, WEBP and ZLIB are permitted.")
   endif()
 endforeach()
