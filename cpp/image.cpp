@@ -349,6 +349,8 @@ Image Image::open(const std::string &path) {
     throw std::invalid_argument("image file too large");
   membudget::require(static_cast<size_t>(file_bytes) * 2 + 2 * 1024 * 1024);
   MagickWand *probe = NewMagickWand();
+  if (!probe)
+    throw std::runtime_error("image allocation failed");
   try {
     ok(MagickPingImage(probe, read_path.c_str()), probe, "inspect image");
     if (MagickGetNumberImages(probe) > 1)
@@ -360,6 +362,8 @@ Image Image::open(const std::string &path) {
   }
   DestroyMagickWand(probe);
   MagickWand *p = NewMagickWand();
+  if (!p)
+    throw std::runtime_error("image allocation failed");
   try {
     ok(MagickReadImage(p, read_path.c_str()), p, "read image");
   } catch (...) {
@@ -476,12 +480,14 @@ Image &Image::crop(std::size_t x, std::size_t y, std::size_t w, std::size_t h) {
 Image &Image::rotate(double d, Color bg) {
   if (!std::isfinite(d))
     throw std::invalid_argument("rotation is not finite");
+  d = std::remainder(d, 360.0);
   double rad = d * 3.14159265358979323846 / 180.0;
   double nw = std::ceil(std::abs(width() * std::cos(rad)) +
                         std::abs(height() * std::sin(rad)));
   double nh = std::ceil(std::abs(width() * std::sin(rad)) +
                         std::abs(height() * std::cos(rad)));
-  if (nw < 1 || nh < 1 || nw > std::numeric_limits<std::size_t>::max() ||
+  if (!std::isfinite(nw) || !std::isfinite(nh) || nw < 1 || nh < 1 ||
+      nw > std::numeric_limits<std::size_t>::max() ||
       nh > std::numeric_limits<std::size_t>::max())
     throw std::invalid_argument("rotation extent is invalid");
   valid_size(std::size_t(nw), std::size_t(nh));
@@ -1064,10 +1070,9 @@ std::string Image::property(const std::string &k) const {
   require_image();
   if (k.empty() || k.size() > 256 || k.find('\0') != std::string::npos)
     throw std::invalid_argument("invalid metadata key");
-  char *v = MagickGetImageProperty(impl_->wand, k.c_str());
-  std::string out = v ? v : "";
-  if (v)
-    MagickRelinquishMemory(v);
+  std::unique_ptr<char, decltype(&MagickRelinquishMemory)> v(
+      MagickGetImageProperty(impl_->wand, k.c_str()), MagickRelinquishMemory);
+  std::string out = v ? v.get() : "";
   if (out.size() > 65536)
     throw std::runtime_error("metadata value exceeds limit");
   return out;

@@ -5,7 +5,9 @@ cd "$HERE"
 BUILD_DIR="${BUILD_DIR:-build}"
 HOST="$HERE/$BUILD_DIR/lmimg"
 UNAME_S="$(uname -s)"
-TIMEOUT="$(command -v timeout || command -v gtimeout)"
+if [ -x /usr/bin/timeout ]; then TIMEOUT=/usr/bin/timeout
+elif [ -x /usr/bin/timeout.exe ]; then TIMEOUT=/usr/bin/timeout.exe
+else TIMEOUT="$(command -v gtimeout || command -v timeout)"; fi
 case "$UNAME_S" in MINGW*|MSYS*|CYGWIN*) HOST="$HOST.exe";; esac
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/lmimg-test-XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT

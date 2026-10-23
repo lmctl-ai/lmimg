@@ -155,6 +155,13 @@ int main(int argc, char **argv) {
           "identity perspective");
     check(geometry.clone().lens(0).ssim(geometry) > 0.99, "identity lens");
 
+    Img quarter = Img::create(3, 2, {1, 0, 0, 1}).rotate(90);
+    check(quarter.width() == 2 && quarter.height() == 3,
+          "quarter-turn dimensions");
+    Img large_angle = Img::create(3, 2, {1, 0, 0, 1}).rotate(1e308);
+    check(large_angle.width() > 0 && large_angle.width() <= 8 &&
+              large_angle.height() > 0 && large_angle.height() <= 8,
+          "finite huge angle normalizes before trigonometry");
     Img ramp = Img::pattern(17, 9, "x", "y", "0.25", "1");
     close(ramp.pixel(0, 0).r, 0.0, 1e-12, "pattern origin");
     close(ramp.pixel(16, 8).r, 1.0, 1e-12, "pattern x endpoint");

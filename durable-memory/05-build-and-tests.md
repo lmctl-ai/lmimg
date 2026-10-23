@@ -7,7 +7,7 @@ embedded at build time. No font or kernel/data file is required at runtime.
 
 Local Linux verification on 2026-10-23: all 17 test groups passed in 40.14 seconds,
 with peak resident memory 2,119,916 KiB for the complete build/test command.
-The native suite has 90 active runtime assertions (not C assert macros), including
+The final native suite has 92 active runtime assertions, including the last rotation edge cases (not C assert macros), including
 quantized pixels, geometry, masks/selections, HSL/channel mixing/curves, morphology,
 healing, text colors, alpha preservation, over/multiply/screen, statistics,
 closed-form PSNR/SSIM, seven raster codec round trips, and GIF frame timing.
