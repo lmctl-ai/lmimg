@@ -16,8 +16,12 @@ The codec pins are zlib `51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf`, libpng
 `003501f6d7a8668ce8b6d875e34dd97ad0d5d5b5`; the embedded Roboto source is
 Apache-2.0 at `38062f4b4a0be4346d07a928408da21602545e9e`.
 
-`THIRD_PARTY_NOTICES` carries the attribution, license URLs, exact pins, and
-the required no-warranty terms printed by `lmimg --notices`. The complete
-upstream license texts are retained in each fetched source checkout and are
-identified by path and hash there. No GPL, LGPL, or AGPL code is part of the
-intended closure.
+`THIRD_PARTY_NOTICES` embeds complete upstream license texts and ImageMagick's
+required NOTICE, the IJG README/license and attribution, the selected MIT option
+for stb, Apache-2.0 for Roboto, the SDK's MIT terms, and platform runtime licenses.
+The standard glibc/GCC/MinGW runtime terms are separate from the permissive
+image-library closure. No GIMP/GEGL or copyleft image delegate is used.
+
+Pins must be commit objects rather than annotated-tag objects: the original
+codec tag SHAs checked out to different peeled HEAD commits and failed CI.
+`sync-deps.sh` now checks object type, HEAD and clean source state.

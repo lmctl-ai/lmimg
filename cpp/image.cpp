@@ -37,10 +37,9 @@ void init() {
         "<policymap><policy domain=\"delegate\" rights=\"none\" "
         "pattern=\"*\"/><policy domain=\"coder\" rights=\"none\" "
         "pattern=\"*\"/><policy domain=\"coder\" rights=\"read|write\" "
-        "pattern=\"{PNG,JPEG,TIFF,WEBP,GIF,BMP,PNM}\"/><policy domain=\"path\" "
+        "pattern=\"{PNG,JPEG,TIFF,WEBP,GIF,BMP,PNM,PPM,PGM,PBM}\"/><policy domain=\"path\" "
         "rights=\"none\" pattern=\"@*\"/><policy domain=\"system\" "
-        "name=\"max-profile-size\" value=\"1MiB\"/><policy domain=\"resource\" "
-        "name=\"list-length\" value=\"64\"/></policymap>";
+        "name=\"max-profile-size\" value=\"1MiB\"/></policymap>";
     if (MagickSetSecurityPolicy(policy_wand, policy) == MagickFalse) {
       DestroyMagickWand(policy_wand);
       throw std::runtime_error(
@@ -49,6 +48,7 @@ void init() {
     DestroyMagickWand(policy_wand);
     MagickSetResourceLimit(DiskResource, 0);
     MagickSetResourceLimit(MapResource, 0);
+    MagickSetResourceLimit(ListLengthResource, MagickResourceInfinity);
   });
 }
 
@@ -309,6 +309,7 @@ Image Image::create(std::size_t w, std::size_t h, Color fill) {
   try {
     ok(MagickNewImage(p, w, h, c), p, "create image");
     ok(MagickSetImageAlphaChannel(p, SetAlphaChannel), p, "activate alpha");
+    ok(MagickSetImageAlpha(p, clip(fill.a)), p, "set fill alpha");
   } catch (...) {
     throw;
   }
@@ -319,18 +320,14 @@ Image Image::create(std::size_t w, std::size_t h, Color fill) {
 Image Image::open(const std::string &path) {
   init();
   check_path(path);
-  struct ListLimit {
-    MagickSizeType previous = MagickGetResourceLimit(ListLengthResource);
-    ListLimit() { MagickSetResourceLimit(ListLengthResource, 1); }
-    ~ListLimit() { MagickSetResourceLimit(ListLengthResource, previous); }
-  } list_limit;
+  const std::string read_path = path + "[0]";
   auto file_bytes = std::filesystem::file_size(path);
   if (file_bytes > std::numeric_limits<size_t>::max() / 2)
     throw std::invalid_argument("image file too large");
   membudget::require(static_cast<size_t>(file_bytes) * 2 + 2 * 1024 * 1024);
   MagickWand *probe = NewMagickWand();
   try {
-    ok(MagickPingImage(probe, path.c_str()), probe, "inspect image");
+    ok(MagickPingImage(probe, read_path.c_str()), probe, "inspect image");
     if (MagickGetNumberImages(probe) > 1)
       throw std::invalid_argument("multi-frame input is not supported");
     valid_size(MagickGetImageWidth(probe), MagickGetImageHeight(probe));
@@ -341,7 +338,7 @@ Image Image::open(const std::string &path) {
   DestroyMagickWand(probe);
   MagickWand *p = NewMagickWand();
   try {
-    ok(MagickReadImage(p, path.c_str()), p, "read image");
+    ok(MagickReadImage(p, read_path.c_str()), p, "read image");
   } catch (...) {
     DestroyMagickWand(p);
     throw;
@@ -1048,12 +1045,13 @@ Stats Image::stats() const {
   ok(MagickExportImagePixels(impl_->wand, 0, 0, s.width, s.height, "RGBA",
                              DoublePixel, px.data()),
      impl_->wand, "export pixels");
-  double sum[4] = {}, sq[4] = {}, lo[4] = {1, 1, 1, 1}, hi[4] = {};
+  double mean[4] = {}, m2[4] = {}, lo[4] = {1, 1, 1, 1}, hi[4] = {};
   for (size_t i = 0; i < s.pixels; i++)
     for (int k = 0; k < 4; k++) {
       double v = px[i * 4 + k];
-      sum[k] += v;
-      sq[k] += v * v;
+      double delta = v - mean[k];
+      mean[k] += delta / double(i + 1);
+      m2[k] += delta * (v - mean[k]);
       lo[k] = std::min(lo[k], v);
       hi[k] = std::max(hi[k], v);
     }
@@ -1063,8 +1061,8 @@ Stats Image::stats() const {
   double *mn[] = {&s.minimum.r, &s.minimum.g, &s.minimum.b, &s.minimum.a};
   double *mx[] = {&s.maximum.r, &s.maximum.g, &s.maximum.b, &s.maximum.a};
   for (int k = 0; k < 4; k++) {
-    *n[k] = sum[k] / s.pixels;
-    *d[k] = std::sqrt(std::max(0., sq[k] / s.pixels - *n[k] * *n[k]));
+    *n[k] = mean[k];
+    *d[k] = std::sqrt(std::max(0., m2[k] / s.pixels));
     *mn[k] = lo[k];
     *mx[k] = hi[k];
   }
@@ -1208,6 +1206,8 @@ void Animation::save(const std::string &path) const {
   if (frames_.empty())
     throw std::runtime_error("empty animation");
   check_path(path);
+  if (path_format(path) != "GIF")
+    throw std::invalid_argument("animation output must use GIF format");
   std::size_t total = 0;
   std::size_t w = 0, h = 0;
   for (auto &f : frames_) {

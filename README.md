@@ -44,7 +44,7 @@ All image edits mutate their receiver and return it for chaining. Use `copy()` b
 | Contact sheets / GIF | `img.panel(a,b,gap)`, `img.animation().add(frame,delay).save(path)` |
 | Metadata | `metadata(key,value)`, `property(key)` |
 
-`lmimg --dsl-signatures` lists exact parameter types and overloads; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM are supported local raster formats. Animated output is GIF; delays are centiseconds. Comparison requires equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM uses one global luma window with sample covariance and constants 0.01² and 0.03²; it is a compact image statistic rather than a multiscale perceptual model.
+`lmimg --dsl-signatures` lists exact parameter types and overloads; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM are supported local raster formats. Animated output is GIF; delays are centiseconds. `open` reads the first frame of an animated input. Text supports ASCII through the embedded Roboto font. Comparison requires equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM uses one global luma window with sample covariance and constants 0.01² and 0.03²; it is a compact image statistic rather than a multiscale perceptual model.
 
 ### Examples
 

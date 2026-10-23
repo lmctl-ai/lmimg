@@ -6,3 +6,5 @@
 - Only the bundled raster formats and embedded font are supported. No external ImageMagick delegates, modules, PDF/PostScript/Ghostscript, GIMP/GEGL plug-ins, or system font search are part of the API.
 - Objects remain in their host arena until execution ends; use the documented total memory budget for long scripts.
 - No GUI, interactive shell, device capture, or project-file editor is included.
+
+- Text currently accepts ASCII only. Raster `open` reads the first frame of animated input; GIF output is built explicitly with `img.animation()`.
