@@ -181,13 +181,16 @@ jobs:
           got="$(dist/lmimg-linux-x64 --version)"
           test "$got" = "lmimg ${GITHUB_REF_NAME#v}" || { echo "::error::tag $GITHUB_REF_NAME but binary says '$got' (bump project VERSION in CMakeLists.txt)"; exit 1; }
 
+      - name: generate binary checksums
+        run: (cd dist && sha256sum lmimg-*) > dist/SHA256SUMS
+
       - name: attach binaries to the GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # idempotent: re-running a tag's workflow overwrites the assets
           if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber dist/lmimg-*
+            gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber dist/lmimg-* dist/SHA256SUMS
           else
-            gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes dist/lmimg-*
+            gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes dist/lmimg-* dist/SHA256SUMS
           fi
