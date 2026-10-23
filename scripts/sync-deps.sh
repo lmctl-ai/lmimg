@@ -8,6 +8,12 @@ while read -r name repo commit; do
   dir="$HERE/third_party/$name"
   if [ "${1:-}" = "--verify" ]; then
     [ -d "$dir/.git" ] || { echo "third_party/$name missing: run scripts/sync-deps.sh" >&2; exit 1; }
+    # deps.lock deliberately stores peeled commit IDs, not annotated tag
+    # objects. Rejecting a tag object avoids a checkout that passes through
+    # FETCH_HEAD but cannot satisfy reproducible full-SHA verification.
+    [ "$(git -C "$dir" cat-file -t "$commit" 2>/dev/null || true)" = commit ] || {
+      echo "deps.lock entry for $name is not a commit object: $commit" >&2; exit 1;
+    }
     have="$(git -C "$dir" rev-parse HEAD)"
     [ "$have" = "$commit" ] || { echo "third_party/$name at $have, deps.lock pins $commit" >&2; exit 1; }
     git -C "$dir" diff --quiet HEAD -- || { echo "third_party/$name has modified tracked source" >&2; exit 1; }
@@ -15,6 +21,9 @@ while read -r name repo commit; do
   fi
   if [ ! -d "$dir/.git" ]; then mkdir -p "$dir"; git -C "$dir" init -q; git -C "$dir" remote add origin "$repo"; fi
   git -C "$dir" fetch -q --depth 1 origin "$commit"
+  [ "$(git -C "$dir" cat-file -t "$commit" 2>/dev/null || true)" = commit ] || {
+    echo "fetched dependency $name did not resolve to a commit object: $commit" >&2; exit 1;
+  }
   git -C "$dir" checkout -q -f FETCH_HEAD
   echo "synced third_party/$name at $commit"
 done < "$HERE/deps.lock"
