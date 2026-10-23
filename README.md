@@ -4,9 +4,9 @@ Image editing, compositing, and procedural graphics from scripts.
 
 | A gradient becomes a poster | Light, pigment, and transparency |
 | --- | --- |
-| ![Procedural gradient with an annotated color study](docs/images/gradient_studio.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | ![Original, multiply and screen blends](docs/images/blend_modes.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
+| ![Procedural gradient with an annotated color study](docs/images/gradient_studio.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | ![Original and screen blend](docs/images/blend_modes.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
 | ![Original and graded tones](docs/images/levels_lab.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` | ![Original and sepia print treatment](docs/images/sepia_poster.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` |
-| ![A focused subject revealed against a blurred field](docs/images/blur_reveal.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` | ![Edges extracted from a synthetic geometric scene](docs/images/edge_map.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
+| ![Gaussian blur softens geometric boundaries](docs/images/blur_reveal.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` | ![Edges extracted from a synthetic geometric scene](docs/images/edge_map.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
 
 Install [lmctl](https://github.com/lmctl-ai/lmctl), then copy any caption above into a terminal. Each script installs its bound host as needed and writes `images/<example>.png` in the current directory. Inputs are generated in the script; no photographs or additional files are required.
 
@@ -51,10 +51,10 @@ All image edits mutate their receiver and return it for chaining. Use `copy()` b
 | Story | Run from any empty directory |
 | --- | --- |
 | Procedural color studio | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` |
-| Multiply and screen | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
+| Screen compositing | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
 | Recovering tonal contrast | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` |
 | A warm print treatment | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` |
-| Selective focus | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` |
+| Softening geometric boundaries | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` |
 | Finding boundaries | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
 | A contact sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` |
 | A moving color wave | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |

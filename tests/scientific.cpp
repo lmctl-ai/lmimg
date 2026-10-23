@@ -18,7 +18,8 @@ std::size_t checks = 0;
 
 void check(bool ok, const std::string &what) {
   ++checks;
-  if (!ok) throw std::runtime_error("scientific check failed: " + what);
+  if (!ok)
+    throw std::runtime_error("scientific check failed: " + what);
 }
 
 void close(double got, double want, double tol, const std::string &what) {
@@ -37,10 +38,11 @@ void codec_roundtrip(const Img &source, const fs::path &dir,
   source.save(path.string(), format);
   check(fs::file_size(path) > 0, format + " writer produced an empty file");
   Img decoded = Img::open(path.string());
-  check(decoded.width() == source.width() && decoded.height() == source.height(),
+  check(decoded.width() == source.width() &&
+            decoded.height() == source.height(),
         format + " roundtrip changed dimensions");
-  // Lossless formats preserve every channel. JPEG is intentionally checked with a
-  // codec-appropriate error bound because its quantization is lossy.
+  // Lossless formats preserve every channel. JPEG is intentionally checked with
+  // a codec-appropriate error bound because its quantization is lossy.
   const double similarity = source.ssim(decoded);
   close(similarity, 1.0, format == "JPEG" ? 0.08 : 1e-8,
         format + " roundtrip SSIM");
@@ -77,12 +79,12 @@ void check_animation_gif(const fs::path &path) {
 
 int main(int argc, char **argv) {
   try {
-    const fs::path dir = argc > 1 ? fs::path(argv[1])
-                                  : fs::temp_directory_path() / "lmimg-scientific";
+    const fs::path dir = argc > 1
+                             ? fs::path(argv[1])
+                             : fs::temp_directory_path() / "lmimg-scientific";
     fs::create_directories(dir);
 
-    const double q64 = 64.0 / 255.0, q128 = 128.0 / 255.0,
-                 q192 = 192.0 / 255.0;
+    const double q64 = 64.0 / 255.0, q128 = 128.0 / 255.0, q192 = 192.0 / 255.0;
     Img solid = Img::create(32, 24, {q64, q128, q192, 1.0});
     check(solid.width() == 32 && solid.height() == 24, "create dimensions");
     const Color solid_pixel = solid.pixel(0, 0);
@@ -145,9 +147,11 @@ int main(int argc, char **argv) {
     close(selected.pixel(0, 0).a, 0.0, 0.002, "selection outside");
     Img healed = Img::create(5, 5, {0.2, 0.4, 0.6, 1});
     healed.set_pixel(2, 2, {1, 1, 1, 1}).heal(2, 2, 1, 1, 1);
-    close(healed.pixel(2, 2).r, 0.2, 0.02, "healing fills region from boundary");
+    close(healed.pixel(2, 2).r, 0.2, 0.02,
+          "healing fills region from boundary");
     Img geometry = Img::pattern(9, 9, "x", "y", "0.3", "1");
-    check(geometry.clone().perspective(0, 0, 1, 0, 1, 1, 0, 1).ssim(geometry) > 0.99,
+    check(geometry.clone().perspective(0, 0, 1, 0, 1, 1, 0, 1).ssim(geometry) >
+              0.99,
           "identity perspective");
     check(geometry.clone().lens(0).ssim(geometry) > 0.99, "identity lens");
 
@@ -162,8 +166,11 @@ int main(int argc, char **argv) {
     close(levels.pixel(0, 0).r, 128.0 / 255.0, 0.002, "identity levels");
     Img sepia = Img::create(1, 1, {0.0, 0.0, 1.0, 1});
     sepia.sepia(0.0);
-    check(sepia.pixel(0, 0).r > sepia.pixel(0, 0).b,
-          "sepia warms blue input");
+    close(sepia.pixel(0, 0).b, 1.0, 1e-12,
+          "zero sepia strength preserves input");
+    sepia.sepia(100);
+    close(sepia.pixel(0, 0).r, .189, .003, "sepia matrix red known answer");
+    close(sepia.pixel(0, 0).b, .131, .003, "sepia matrix blue known answer");
 
     Img impulse = Img::create(9, 9, {0, 0, 0, 1});
     impulse.set_pixel(4, 4, {1, 1, 1, 1});
@@ -178,6 +185,22 @@ int main(int argc, char **argv) {
     Img edges = constant.clone().edges();
     close(edges.stats().mean.r, 0.0, 1e-12, "edges of constant image");
 
+    Img alpha_probe = Img::create(9, 9, {0.4, 0.2, 0.8, 128.0 / 255.0});
+    alpha_probe.levels(0.1, 1.2, 0.9)
+        .blur(2, 1)
+        .sharpen(1, 1)
+        .edges(1)
+        .sepia(80);
+    close(alpha_probe.pixel(4, 4).a, 128.0 / 255.0, 1e-12,
+          "color filters preserve alpha");
+    Img backdrop = Img::create(2, 2, {0.2, 0.4, 0.6, 1});
+    Img foreground = Img::create(2, 2, {0.5, 0.25, 0.75, 1});
+    Img multiplied = backdrop.clone().blend(foreground, "multiply", 1);
+    close(multiplied.pixel(0, 0).r, 0.1, 0.006, "multiply red known pair");
+    close(multiplied.pixel(0, 0).b, 0.45, 0.006, "multiply blue known pair");
+    Img screened = backdrop.clone().blend(foreground, "screen", 1);
+    close(screened.pixel(0, 0).r, 0.6, 0.006, "screen red known pair");
+    close(screened.pixel(0, 0).b, 0.9, 0.006, "screen blue known pair");
     Img overlay = Img::create(2, 2, {1, 0, 0, 0.5});
     Img base = Img::create(4, 4, {0, 0, 1, 1});
     base.blend(overlay, "over", 1.0, 1, 1);
@@ -217,7 +240,12 @@ int main(int argc, char **argv) {
     const fs::path gif = dir / "animation.gif";
     animation.save(gif.string());
     check(fs::file_size(gif) > 0, "animation GIF writer");
-    check(frame_a.ssim(frame_b) < 0.01, "animation source frames differ");
+    check(frame_a.pixel(0, 0).r > 0.99 && frame_b.pixel(0, 0).r < 0.01,
+          "animation source frames differ");
+    close(frame_a.ssim(frame_b),
+          (2 * 0.2126 * 0.0722 + 0.0001) /
+              (0.2126 * 0.2126 + 0.0722 * 0.0722 + 0.0001),
+          1e-10, "SSIM constant-color known pair");
     check_animation_gif(gif);
     Img montage = lmimg::montage({frame_a, frame_b}, 2, 2, {1, 1, 1, 1});
     check(montage.width() == 30 && montage.height() == 12, "montage geometry");

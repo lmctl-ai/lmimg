@@ -49,7 +49,7 @@ public:
              double lightness_scale = 1.0);
   Image &channel_mix(const std::array<double, 9> &matrix);
   Image &grayscale();
-  Image &sepia(double threshold = 80.0);
+  Image &sepia(double strength = 80.0);
   Image &blur(double radius, double sigma);
   Image &sharpen(double radius, double sigma);
   Image &edges(double radius = 1.0);

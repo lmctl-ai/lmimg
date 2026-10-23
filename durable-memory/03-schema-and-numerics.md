@@ -11,3 +11,7 @@ The histogram has 256 bins of rounded arithmetic-mean RGB intensity and exports 
 Curves are piecewise-linear control pairs built with `img.curve().point(x,y)`; x must increase from 0 to 1, and all coordinates lie in [0,1]. HSL adds hue in degrees and scales saturation/lightness. `channelmix` takes a row-major 3×3 RGB matrix; alpha is preserved. Masks multiply existing alpha by the mask's weighted RGB luma and alpha. Rectangular selections clear alpha outside their bounds. Layer stacks snapshot their inputs on add; over/multiply/screen use straight-alpha source-over compositing, with opacity applied to source alpha.
 
 Perspective maps the source unit-square corners to the supplied normalized quadrilateral and inverse-samples on the existing output canvas. Lens distortion samples around the image center with radial factor `1 + d*r²`; it is a compact single-coefficient model. Healing-lite replaces a rectangular region's RGB with the mean RGB of its surrounding boundary band, preserving alpha. It is intentionally a local blemish correction, not content reconstruction. Morphology uses square neighborhoods with replicated edge samples and supports erode, dilate and median.
+
+Sepia uses the RGB matrix rows (0.393,0.769,0.189), (0.349,0.686,0.168),
+(0.272,0.534,0.131), mixed with the source by strength/100 and clipped.
+Strength 0 is identity; 100 is the full warm-tone matrix. Alpha is preserved.

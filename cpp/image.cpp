@@ -37,7 +37,8 @@ void init() {
         "<policymap><policy domain=\"delegate\" rights=\"none\" "
         "pattern=\"*\"/><policy domain=\"coder\" rights=\"none\" "
         "pattern=\"*\"/><policy domain=\"coder\" rights=\"read|write\" "
-        "pattern=\"{PNG,JPEG,TIFF,WEBP,GIF,BMP,PNM,PPM,PGM,PBM}\"/><policy domain=\"path\" "
+        "pattern=\"{PNG,JPEG,TIFF,WEBP,GIF,BMP,PNM,PPM,PGM,PBM}\"/><policy "
+        "domain=\"path\" "
         "rights=\"none\" pattern=\"@*\"/><policy domain=\"system\" "
         "name=\"max-profile-size\" value=\"1MiB\"/></policymap>";
     if (MagickSetSecurityPolicy(policy_wand, policy) == MagickFalse) {
@@ -206,6 +207,28 @@ void import_rgba(MagickWand *w, std::vector<double> &a) {
                              a.data()),
      w, "import pixels");
 }
+template <class F> void rgb_filter(MagickWand *p, F operation) {
+  const size_t w = MagickGetImageWidth(p), h = MagickGetImageHeight(p);
+  std::vector<unsigned char> alpha(w * h);
+  ok(MagickExportImagePixels(p, 0, 0, w, h, "A", CharPixel, alpha.data()), p,
+     "read filter alpha");
+  const auto old = MagickSetImageChannelMask(
+      p, static_cast<ChannelType>(RedChannel | GreenChannel | BlueChannel));
+  operation();
+  MagickSetImageChannelMask(p, old);
+  ok(MagickSetImageAlphaChannel(p, ActivateAlphaChannel), p,
+     "activate filter alpha");
+  ok(MagickImportImagePixels(p, 0, 0, w, h, "A", CharPixel, alpha.data()), p,
+     "preserve filter alpha");
+}
+void kernel_peak(double radius, double sigma) {
+  if (!std::isfinite(radius) || !std::isfinite(sigma) || radius < 0 ||
+      sigma < 0 || radius > 256 || sigma > 256)
+    throw std::invalid_argument("filter radius and sigma must be in [0,256]");
+  auto width =
+      static_cast<size_t>(2 * std::ceil(std::max(radius, 4 * sigma)) + 1);
+  membudget::require(width * width * sizeof(double) + 32768);
+}
 double lum(const double *p) {
   return .2126 * p[0] + .7152 * p[1] + .0722 * p[2];
 }
@@ -322,7 +345,7 @@ Image Image::open(const std::string &path) {
   check_path(path);
   const std::string read_path = path + "[0]";
   auto file_bytes = std::filesystem::file_size(path);
-  if (file_bytes > std::numeric_limits<size_t>::max() / 2)
+  if (file_bytes > (std::numeric_limits<size_t>::max() - 2 * 1024 * 1024) / 2)
     throw std::invalid_argument("image file too large");
   membudget::require(static_cast<size_t>(file_bytes) * 2 + 2 * 1024 * 1024);
   MagickWand *probe = NewMagickWand();
@@ -475,12 +498,14 @@ Image &Image::flip(bool horizontal) {
 }
 Image &Image::levels(double black, double gamma, double white) {
   if (!std::isfinite(black) || !std::isfinite(gamma) || !std::isfinite(white) ||
-      !(gamma > 0))
+      !(gamma > 0) || black < 0 || white > 1 || black >= white)
     throw std::invalid_argument(
-        "levels parameters must be finite and gamma positive");
+        "levels require 0 <= black < white <= 1 and positive finite gamma");
   return mutate([&](MagickWand *p) {
-    ok(MagickLevelImage(p, black * QuantumRange, gamma, white * QuantumRange),
-       p, "levels");
+    rgb_filter(p, [&] {
+      ok(MagickLevelImage(p, black * QuantumRange, gamma, white * QuantumRange),
+         p, "levels");
+    });
   });
 }
 Image &Image::curves(const std::vector<double> &cp) {
@@ -555,26 +580,39 @@ Image &Image::grayscale() {
     import_rgba(p, a);
   });
 }
-Image &Image::sepia(double t) {
-  return mutate(
-      [&](MagickWand *p) { ok(MagickSepiaToneImage(p, t), p, "sepia"); });
+Image &Image::sepia(double strength) {
+  if (!std::isfinite(strength) || strength < 0 || strength > 100)
+    throw std::invalid_argument("sepia strength must be in [0,100]");
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a;
+    export_rgba(p, a);
+    double t = strength / 100;
+    for (size_t i = 0; i < a.size(); i += 4) {
+      double r = a[i], g = a[i + 1], b = a[i + 2];
+      a[i] = clip((1 - t) * r + t * (.393 * r + .769 * g + .189 * b));
+      a[i + 1] = clip((1 - t) * g + t * (.349 * r + .686 * g + .168 * b));
+      a[i + 2] = clip((1 - t) * b + t * (.272 * r + .534 * g + .131 * b));
+    }
+    import_rgba(p, a);
+  });
 }
-Image &Image::blur(double r, double s) {
-  if (!std::isfinite(r) || !std::isfinite(s) || r < 0 || s < 0)
-    throw std::invalid_argument("blur radii must be finite and nonnegative");
-  return mutate(
-      [&](MagickWand *p) { ok(MagickBlurImage(p, r, s), p, "blur"); });
+Image &Image::blur(double r, double sigma) {
+  kernel_peak(r, sigma);
+  return mutate([&](MagickWand *p) {
+    rgb_filter(p, [&] { ok(MagickBlurImage(p, r, sigma), p, "blur"); });
+  });
 }
-Image &Image::sharpen(double r, double s) {
-  if (!std::isfinite(r) || !std::isfinite(s) || r < 0 || s < 0)
-    throw std::invalid_argument("sharpen radii must be finite and nonnegative");
-  return mutate(
-      [&](MagickWand *p) { ok(MagickSharpenImage(p, r, s), p, "sharpen"); });
+Image &Image::sharpen(double r, double sigma) {
+  kernel_peak(r, sigma);
+  return mutate([&](MagickWand *p) {
+    rgb_filter(p, [&] { ok(MagickSharpenImage(p, r, sigma), p, "sharpen"); });
+  });
 }
 Image &Image::edges(double r) {
-  if (!std::isfinite(r) || r < 0)
-    throw std::invalid_argument("edge radius must be finite and nonnegative");
-  return mutate([&](MagickWand *p) { ok(MagickEdgeImage(p, r), p, "edges"); });
+  kernel_peak(r, 0);
+  return mutate([&](MagickWand *p) {
+    rgb_filter(p, [&] { ok(MagickEdgeImage(p, r), p, "edges"); });
+  });
 }
 Image &Image::unsharp(double r, double s, double amount, double threshold) {
   if (!std::isfinite(r) || !std::isfinite(s) || r < 0 || s < 0 ||
@@ -1223,7 +1261,7 @@ void Animation::save(const std::string &path) const {
       throw std::invalid_argument("animation is too large");
     total += w * h;
   }
-  if (total > std::numeric_limits<std::size_t>::max() / 32)
+  if (total > (std::numeric_limits<std::size_t>::max() - 4096) / 32)
     throw std::invalid_argument("animation is too large");
   membudget::require(total * 32 + 4096);
   init();

@@ -16,4 +16,4 @@ for src in "$HERE"/examples/*.lms; do
   cp "$work/images/${name}.png" "$HERE/docs/images/${name}.png"
   if [ -f "$work/images/${name}.gif" ]; then cp "$work/images/${name}.gif" "$HERE/docs/images/${name}.gif"; fi
 done
-python3 "$HERE/scripts/check-gallery.py" --generated
+python3 "$HERE/scripts/check-gallery.py" --generated --generated-dir "$work/images"
