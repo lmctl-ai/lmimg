@@ -160,6 +160,11 @@ if(WIN32)
   set(IM_CPPFLAGS "-I${CODEC_INCLUDE_BASH}")
   set(IM_LDFLAGS "-L${CODEC_LIB_BASH}")
   set(IM_LIBS "-L${CODEC_LIB_BASH} -lsharpyuv")
+  # ImageMagick's MinGW compatibility layer passes its POSIX stat buffer to
+  # the wide CRT wrapper. Newer mingw-w64 headers diagnose that legacy call as
+  # an incompatible pointer type; the resulting ABI is the intended Windows
+  # stat layout and the upstream source handles the conversion itself.
+  set(IM_CFLAGS "-Wno-incompatible-pointer-types")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/static-codec-pkg-config.sh.in"
     "${IM_PKG_CONFIG_NATIVE}" @ONLY)
   file(CHMOD "${IM_PKG_CONFIG_NATIVE}"
@@ -178,6 +183,7 @@ else()
   set(IM_CPPFLAGS "-I${CODEC_PREFIX}/include")
   set(IM_LDFLAGS "-L${CODEC_PREFIX}/lib")
   set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
+  set(IM_CFLAGS)
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
 endif()
 if(WIN32 AND DEFINED LMIMG_MSYS2_USR_BIN)
@@ -194,6 +200,7 @@ endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
     "CPPFLAGS=${IM_CPPFLAGS}"
+    "CFLAGS=${IM_CFLAGS}"
     "LDFLAGS=${IM_LDFLAGS}"
     "LIBS=${IM_LIBS}"
     "PKG_CONFIG=${IM_PKG_CONFIG}"
