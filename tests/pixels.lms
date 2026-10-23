@@ -1,0 +1,17 @@
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let im=img.canvas(8,6,1.0,0.0,0.0,1.0);
+img.assert_close(im.pixel(0,0,0),1.0,0.000001);
+img.assert_close(im.mean(1),0.0,0.000001);
+let cp=im.copy();
+cp.set_pixel(0,0,0.0,1.0,0.0,1.0);
+img.assert_close(im.pixel(0,0,0),1.0,0.000001);
+img.assert_close(cp.pixel(0,0,1),1.0,0.000001);
+img.assert_close(im.ssim(im),1.0,0.000001);
+let p=img.pattern(9,7,"x","y","0","1");
+img.assert_close(p.pixel(8,6,0),1.0,0.000001);
+img.assert_close(p.pixel(8,6,1),1.0,0.000001);
+p.resize(18,14).crop(1,1,8,6).flip(true);
+img.assert_true(p.width()==8 && p.height()==6);
+end _dsl_
+out=ARGV.len()>0 ? ARGV[0] : "pixels.dslb";
+savedsl(p,out);

@@ -1,0 +1,634 @@
+{
+  "dsl.schema": 2,
+  "name": "lmimg",
+  "types": {
+    "Image": {
+      "methods": {
+        "property": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "string"
+          }
+        ],
+        "curves": [
+          {
+            "params": [
+              "Curve"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "hsl": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "channelmix": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "morphology": [
+          {
+            "params": [
+              "string",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "mask": [
+          {
+            "params": [
+              "Image"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "selection": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "heal": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "perspective": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "lens": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "copy": [
+          {
+            "params": [],
+            "returns": "Image"
+          }
+        ],
+        "width": [
+          {
+            "params": [],
+            "returns": "int"
+          }
+        ],
+        "height": [
+          {
+            "params": [],
+            "returns": "int"
+          }
+        ],
+        "pixel": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "float"
+          }
+        ],
+        "set_pixel": [
+          {
+            "params": [
+              "int",
+              "int",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "resize": [
+          {
+            "params": [
+              "int",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "crop": [
+          {
+            "params": [
+              "int",
+              "int",
+              "int",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "rotate": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "flip": [
+          {
+            "params": [
+              "bool"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "levels": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "grayscale": [
+          {
+            "params": [],
+            "returns": "Image"
+          }
+        ],
+        "sepia": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "blur": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "sharpen": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "edges": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "unsharp": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "vignette": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "tilt_shift": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "blend": [
+          {
+            "params": [
+              "Image",
+              "string",
+              "float",
+              "int",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "rect": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "circle": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "line": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "text": [
+          {
+            "params": [
+              "float",
+              "float",
+              "string",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "metadata": [
+          {
+            "params": [
+              "string",
+              "string"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "mean": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "float"
+          }
+        ],
+        "stddev": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "float"
+          }
+        ],
+        "min": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "float"
+          }
+        ],
+        "max": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "float"
+          }
+        ],
+        "ssim": [
+          {
+            "params": [
+              "Image"
+            ],
+            "returns": "float"
+          }
+        ],
+        "psnr": [
+          {
+            "params": [
+              "Image"
+            ],
+            "returns": "float"
+          }
+        ],
+        "histogram": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ],
+        "save": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ]
+      }
+    },
+    "Img": {
+      "methods": {
+        "curve": [
+          {
+            "params": [],
+            "returns": "Curve"
+          }
+        ],
+        "layers": [
+          {
+            "params": [
+              "int",
+              "int"
+            ],
+            "returns": "Layers"
+          }
+        ],
+        "montage": [
+          {
+            "params": [],
+            "returns": "Montage"
+          }
+        ],
+        "canvas": [
+          {
+            "params": [
+              "int",
+              "int",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "pattern": [
+          {
+            "params": [
+              "int",
+              "int",
+              "string",
+              "string",
+              "string",
+              "string"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "open": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "animation": [
+          {
+            "params": [],
+            "returns": "Animation"
+          }
+        ],
+        "panel": [
+          {
+            "params": [
+              "Image",
+              "Image",
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "eval": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "float"
+          }
+        ],
+        "assert_close": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "void"
+          }
+        ],
+        "assert_true": [
+          {
+            "params": [
+              "bool"
+            ],
+            "returns": "void"
+          }
+        ],
+        "print": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ]
+      }
+    },
+    "Curve": {
+      "methods": {
+        "point": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "Curve"
+          }
+        ]
+      }
+    },
+    "Layers": {
+      "methods": {
+        "add": [
+          {
+            "params": [
+              "Image",
+              "string",
+              "float",
+              "int",
+              "int"
+            ],
+            "returns": "Layers"
+          }
+        ],
+        "masked": [
+          {
+            "params": [
+              "Image",
+              "Image",
+              "string",
+              "float",
+              "int",
+              "int"
+            ],
+            "returns": "Layers"
+          }
+        ],
+        "render": [
+          {
+            "params": [],
+            "returns": "Image"
+          }
+        ]
+      }
+    },
+    "Montage": {
+      "methods": {
+        "add": [
+          {
+            "params": [
+              "Image"
+            ],
+            "returns": "Montage"
+          }
+        ],
+        "render": [
+          {
+            "params": [
+              "int",
+              "int",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ]
+      }
+    },
+    "Animation": {
+      "methods": {
+        "add": [
+          {
+            "params": [
+              "Image",
+              "int"
+            ],
+            "returns": "Animation"
+          }
+        ],
+        "save": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ],
+        "size": [
+          {
+            "params": [],
+            "returns": "int"
+          }
+        ]
+      }
+    }
+  },
+  "functions": {},
+  "context": {
+    "img": "Img"
+  }
+}

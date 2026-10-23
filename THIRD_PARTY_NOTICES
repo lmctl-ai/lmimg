@@ -1,0 +1,20 @@
+lmimg third-party notices
+=========================
+
+ImageMagick 7.1.2-34 (MagickCore and MagickWand)
+---------------------------------------------------
+Copyright (C) 1999 ImageMagick Studio LLC.
+
+ImageMagick is distributed under the ImageMagick License.  The complete
+license text is included in the pinned source checkout at
+third_party/imagemagick/LICENSE and is available at:
+https://imagemagick.org/license/
+
+ImageMagick permits use, modification, and redistribution, provided that the
+license and clear attribution are included.  lmimg builds static MagickCore
+and MagickWand with loadable modules and delegate execution disabled.  Any
+optional image delegates found by the build are separately licensed and must
+be recorded here before distribution.
+
+No GPL, LGPL, AGPL, Ghostscript, FFmpeg, LCMS, or X11 code is linked by the
+intended lmimg build.

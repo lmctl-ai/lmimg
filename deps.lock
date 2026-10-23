@@ -1,0 +1,12 @@
+# name repo commit  (scripts/sync-deps.sh fetches each into third_party/NAME)
+# ImageMagick is built from source with static MagickCore/MagickWand and no
+# module/delegate execution.  Optional permissive delegates are enabled only
+# when the platform provides them to the pinned build.
+imagemagick https://github.com/ImageMagick/ImageMagick.git a0c4bf729a26a5c2feb28b0365b47a8db736078a
+zlib https://github.com/madler/zlib.git 925af44f3cde53c6b076611c297850091b5dc7bb
+libpng https://github.com/pnggroup/libpng.git 8e6e5eed16748387094c4919711c7c287e0aec89
+libjpeg-turbo https://github.com/libjpeg-turbo/libjpeg-turbo.git 289df647c0f208dad7db63f24830361257812b1b
+libtiff https://gitlab.com/libtiff/libtiff.git 4b058e5c7dfaf62c34a84ab02226fe976aa61dad
+libwebp https://github.com/webmproject/libwebp.git 004d0a19143abc4494474da905b4eca34c7763db
+stb https://github.com/nothings/stb.git 003501f6d7a8668ce8b6d875e34dd97ad0d5d5b5
+roboto https://github.com/googlefonts/roboto.git 38062f4b4a0be4346d07a928408da21602545e9e

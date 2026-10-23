@@ -1,0 +1,234 @@
+#include "image.hpp"
+#include <MagickWand/MagickWand.h>
+
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+
+namespace fs = std::filesystem;
+using lmimg::Color;
+using Img = lmimg::Image;
+
+namespace {
+
+std::size_t checks = 0;
+
+void check(bool ok, const std::string &what) {
+  ++checks;
+  if (!ok) throw std::runtime_error("scientific check failed: " + what);
+}
+
+void close(double got, double want, double tol, const std::string &what) {
+  check(std::isfinite(got) && std::abs(got - want) <= tol,
+        what + " got=" + std::to_string(got) + " want=" + std::to_string(want));
+}
+
+bool near(Color a, Color b, double tol = 1e-6) {
+  return std::abs(a.r - b.r) <= tol && std::abs(a.g - b.g) <= tol &&
+         std::abs(a.b - b.b) <= tol && std::abs(a.a - b.a) <= tol;
+}
+
+void codec_roundtrip(const Img &source, const fs::path &dir,
+                     const std::string &format, const std::string &suffix) {
+  const fs::path path = dir / ("roundtrip." + suffix);
+  source.save(path.string(), format);
+  check(fs::file_size(path) > 0, format + " writer produced an empty file");
+  Img decoded = Img::open(path.string());
+  check(decoded.width() == source.width() && decoded.height() == source.height(),
+        format + " roundtrip changed dimensions");
+  // Lossless formats preserve every channel. JPEG is intentionally checked with a
+  // codec-appropriate error bound because its quantization is lossy.
+  const double similarity = source.ssim(decoded);
+  close(similarity, 1.0, format == "JPEG" ? 0.08 : 1e-8,
+        format + " roundtrip SSIM");
+}
+
+void check_animation_gif(const fs::path &path) {
+  MagickWand *wand = NewMagickWand();
+  check(wand != nullptr, "GIF decoder allocation");
+  if (MagickReadImage(wand, path.string().c_str()) == MagickFalse) {
+    DestroyMagickWand(wand);
+    throw std::runtime_error("GIF decoder could not read animation");
+  }
+  check(MagickGetNumberImages(wand) == 2, "GIF keeps both animation frames");
+  auto sample = [&](size_t index, const char *label) {
+    check(MagickSetIteratorIndex(wand, index) == MagickTrue, label);
+    PixelWand *pixel = NewPixelWand();
+    check(pixel != nullptr, "GIF pixel allocation");
+    check(MagickGetImagePixelColor(wand, 0, 0, pixel) == MagickTrue,
+          "GIF pixel read");
+    const double red = PixelGetRed(pixel);
+    DestroyPixelWand(pixel);
+    return red;
+  };
+  const double first = sample(0, "GIF first frame");
+  const size_t first_delay = MagickGetImageDelay(wand);
+  const double second = sample(1, "GIF second frame");
+  const size_t second_delay = MagickGetImageDelay(wand);
+  DestroyMagickWand(wand);
+  check(std::abs(first - second) > 0.5, "GIF frames retain different pixels");
+  check(first_delay == 5 && second_delay == 7, "GIF frame delays");
+}
+
+} // namespace
+
+int main(int argc, char **argv) {
+  try {
+    const fs::path dir = argc > 1 ? fs::path(argv[1])
+                                  : fs::temp_directory_path() / "lmimg-scientific";
+    fs::create_directories(dir);
+
+    const double q64 = 64.0 / 255.0, q128 = 128.0 / 255.0,
+                 q192 = 192.0 / 255.0;
+    Img solid = Img::create(32, 24, {q64, q128, q192, 1.0});
+    check(solid.width() == 32 && solid.height() == 24, "create dimensions");
+    const Color solid_pixel = solid.pixel(0, 0);
+    check(near(solid_pixel, {q64, q128, q192, 1.0}, 0.002),
+          "create fill color r=" + std::to_string(solid_pixel.r) +
+              " g=" + std::to_string(solid_pixel.g) +
+              " b=" + std::to_string(solid_pixel.b) +
+              " a=" + std::to_string(solid_pixel.a));
+    auto st = solid.stats();
+    check(st.pixels == 768, "pixel count");
+    close(st.mean.r, q64, 0.002, "constant mean red");
+    close(st.mean.g, q128, 0.002, "constant mean green");
+    close(st.mean.b, q192, 0.002, "constant mean blue");
+    close(st.standard_deviation.r, 0.0, 1e-12, "constant standard deviation");
+    close(st.minimum.b, q192, 0.002, "constant minimum");
+    close(st.maximum.a, 1.0, 1e-12, "constant maximum alpha");
+    check(solid.ssim(solid) > 1.0 - 1e-12, "SSIM identity");
+    check(std::isinf(solid.psnr(solid)) || solid.psnr(solid) > 100.0,
+          "PSNR identity");
+    Img black = Img::create(4, 4, {0, 0, 0, 1});
+    Img white = Img::create(4, 4, {1, 1, 1, 1});
+    close(black.psnr(white), 10.0 * std::log10(4.0 / 3.0), 0.01,
+          "PSNR black-white known pair");
+    check(black.ssim(white) < 0.01, "SSIM black-white known pair");
+
+    Img colors = Img::create(3, 1, {0, 0, 0, 1});
+    colors.set_pixel(0, 0, {1, 0, 0, 1})
+        .set_pixel(1, 0, {0, 1, 0, 1})
+        .set_pixel(2, 0, {0, 0, 1, 1});
+    colors.grayscale();
+    close(colors.pixel(0, 0).r, 0.2126, 0.002, "sRGB luminance red");
+    close(colors.pixel(1, 0).r, 0.7152, 0.002, "sRGB luminance green");
+    close(colors.pixel(2, 0).r, 0.0722, 0.002, "sRGB luminance blue");
+    close(colors.pixel(1, 0).g, colors.pixel(1, 0).r, 1e-12,
+          "grayscale equal channels");
+
+    Img feature = Img::create(5, 5, {1, 0, 0, 1});
+    feature.curves({0, 0, 0.5, 0.5, 1, 1});
+    close(feature.pixel(2, 2).r, 1.0, 0.002, "identity curve");
+    Img hue = Img::create(1, 1, {1, 0, 0, 1});
+    hue.hsl(120, 1, 1);
+    check(hue.pixel(0, 0).g > 0.95 && hue.pixel(0, 0).r < 0.05,
+          "HSL hue rotation");
+    Img mixed = Img::create(1, 1, {1, 0, 0, 1});
+    mixed.channel_mix({0, 0, 1, 0, 1, 0, 1, 0, 0});
+    close(mixed.pixel(0, 0).b, 1.0, 0.002, "channel matrix");
+    Img dot = Img::create(5, 5, {0, 0, 0, 1});
+    dot.set_pixel(2, 2, {1, 1, 1, 1}).morphology("dilate", 1);
+    check(dot.pixel(1, 2).r > 0.95 && dot.pixel(0, 0).r < 0.05,
+          "morphology dilation");
+    Img mask = Img::create(5, 5, {0, 0, 0, 0});
+    mask.set_pixel(2, 2, {1, 1, 1, 1});
+    Img masked = Img::create(5, 5, {1, 0, 0, 1});
+    masked.apply_mask(mask);
+    close(masked.pixel(2, 2).a, 1.0, 0.002, "mask center");
+    close(masked.pixel(0, 0).a, 0.0, 0.002, "mask outside");
+    Img selected = Img::create(5, 5, {1, 0, 0, 1});
+    selected.selection(1, 1, 2, 2);
+    close(selected.pixel(1, 1).a, 1.0, 0.002, "selection inside");
+    close(selected.pixel(0, 0).a, 0.0, 0.002, "selection outside");
+    Img healed = Img::create(5, 5, {0.2, 0.4, 0.6, 1});
+    healed.set_pixel(2, 2, {1, 1, 1, 1}).heal(2, 2, 1, 1, 1);
+    close(healed.pixel(2, 2).r, 0.2, 0.02, "healing fills region from boundary");
+    Img geometry = Img::pattern(9, 9, "x", "y", "0.3", "1");
+    check(geometry.clone().perspective(0, 0, 1, 0, 1, 1, 0, 1).ssim(geometry) > 0.99,
+          "identity perspective");
+    check(geometry.clone().lens(0).ssim(geometry) > 0.99, "identity lens");
+
+    Img ramp = Img::pattern(17, 9, "x", "y", "0.25", "1");
+    close(ramp.pixel(0, 0).r, 0.0, 1e-12, "pattern origin");
+    close(ramp.pixel(16, 8).r, 1.0, 1e-12, "pattern x endpoint");
+    close(ramp.pixel(16, 8).g, 1.0, 1e-12, "pattern y endpoint");
+    close(ramp.pixel(8, 4).b, 64.0 / 255.0, 0.002, "pattern expression");
+
+    Img levels = Img::create(1, 1, {0.5, 0.5, 0.5, 1});
+    levels.levels(0.0, 1.0, 1.0);
+    close(levels.pixel(0, 0).r, 128.0 / 255.0, 0.002, "identity levels");
+    Img sepia = Img::create(1, 1, {0.0, 0.0, 1.0, 1});
+    sepia.sepia(0.0);
+    check(sepia.pixel(0, 0).r > sepia.pixel(0, 0).b,
+          "sepia warms blue input");
+
+    Img impulse = Img::create(9, 9, {0, 0, 0, 1});
+    impulse.set_pixel(4, 4, {1, 1, 1, 1});
+    Img blurred = impulse.clone().blur(2.0, 1.0);
+    check(blurred.pixel(4, 4).r < 1.0 && blurred.pixel(4, 4).r > 0.0,
+          "blur lowers impulse peak");
+    check(blurred.pixel(3, 4).r > 0.0, "blur spreads impulse");
+    Img constant = Img::create(9, 9, {0.4, 0.2, 0.8, 1});
+    Img constant_blur = constant.clone().blur(3.0, 2.0);
+    check(constant_blur.ssim(constant) > 1.0 - 1e-8,
+          "blur preserves constant image");
+    Img edges = constant.clone().edges();
+    close(edges.stats().mean.r, 0.0, 1e-12, "edges of constant image");
+
+    Img overlay = Img::create(2, 2, {1, 0, 0, 0.5});
+    Img base = Img::create(4, 4, {0, 0, 1, 1});
+    base.blend(overlay, "over", 1.0, 1, 1);
+    close(base.pixel(1, 1).r, 0.5, 0.02, "alpha over blend red");
+    close(base.pixel(1, 1).b, 0.5, 0.02, "alpha over blend blue");
+    check(near(base.pixel(0, 0), {0, 0, 1, 1}), "blend leaves outside pixels");
+    base.rect(0, 0, 4, 1, {0, 1, 0, 1})
+        .circle(2, 2, 1, {1, 1, 0, 1})
+        .line(0, 3, 3, 3, {1, 0, 1, 1}, 1.0);
+    check(base.stats().maximum.g > 0.9, "drawing primitive");
+    const auto before_text = base.ssim(base.clone());
+    base.text(1, 2, "lmimg", 10.0, {1, 1, 1, 1});
+    close(before_text, 1.0, 1e-12, "pre-text identity");
+    check(base.stats().pixels == 16, "text stays inside image dimensions");
+    Img lettering = Img::create(96, 40, {0, 0, 0, 1});
+    Img blank = lettering.clone();
+    lettering.text(4, 28, "GREEN", 20, {0, 1, 0, 1})
+        .text(58, 28, "BLUE", 20, {0, 0, 1, 1});
+    check(lettering.ssim(blank) < 0.99, "embedded text changes pixels");
+    check(lettering.stats().mean.g > lettering.stats().mean.r &&
+              lettering.stats().mean.b > lettering.stats().mean.r,
+          "embedded text preserves green and blue channels");
+
+    codec_roundtrip(ramp, dir, "PNG", "png");
+    codec_roundtrip(ramp, dir, "JPEG", "jpg");
+    codec_roundtrip(ramp, dir, "TIFF", "tiff");
+    codec_roundtrip(ramp, dir, "WEBP", "webp");
+    codec_roundtrip(ramp, dir, "BMP", "bmp");
+    codec_roundtrip(ramp, dir, "PNM", "pnm");
+    codec_roundtrip(ramp, dir, "GIF", "gif");
+
+    Img frame_a = Img::create(12, 8, {1, 0, 0, 1});
+    Img frame_b = Img::create(12, 8, {0, 0, 1, 1});
+    lmimg::Animation animation;
+    animation.add(frame_a, 5).add(frame_b, 7);
+    check(animation.size() == 2, "animation frame count");
+    const fs::path gif = dir / "animation.gif";
+    animation.save(gif.string());
+    check(fs::file_size(gif) > 0, "animation GIF writer");
+    check(frame_a.ssim(frame_b) < 0.01, "animation source frames differ");
+    check_animation_gif(gif);
+    Img montage = lmimg::montage({frame_a, frame_b}, 2, 2, {1, 1, 1, 1});
+    check(montage.width() == 30 && montage.height() == 12, "montage geometry");
+
+    std::ofstream histogram(dir / "histogram.csv");
+    histogram << solid.histogram_csv();
+    check(histogram.good(), "histogram CSV");
+    std::cout << "scientific image checks passed (" << checks << ")\n";
+    return 0;
+  } catch (const std::exception &e) {
+    std::cerr << e.what() << '\n';
+    return 1;
+  }
+}

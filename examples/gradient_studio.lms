@@ -1,0 +1,15 @@
+out = ARGV.len() > 0 ? ARGV[0] : "gradient_studio.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let before = img.pattern(420, 480, "x", "y", "0.2 + 0.6*x", "1");
+let after = before.copy().levels(0.15, 0.85, 0.9);
+before.text(20.0, 35.0, "BEFORE", 22.0, 1.0, 1.0, 1.0, 1.0);
+after.text(20.0, 35.0, "LEVELS", 22.0, 1.0, 1.0, 1.0, 1.0);
+let im = img.panel(before, after, 20);
+img.assert_true(im.width() == 900);
+img.assert_close(before.pixel(0, 0, 0), 0.0, 0.01);
+im.save("images/gradient_studio.png");
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
