@@ -46,7 +46,7 @@ ok "embedded notices equal complete license inventory"
 case "$UNAME_S" in
  Linux) if ldd "$HOST" >/dev/null 2>&1; then fail 'dynamic Linux executable'; fi;;
  Darwin) bad="$(otool -L "$HOST" | tail -n +2 | grep -v -E '/usr/lib/(libSystem|libc\+\+|libresolv|libiconv)' || true)"; [ -z "$bad" ] || fail "non-system dylibs: $bad";;
- MINGW*|MSYS*|CYGWIN*) bad="$(objdump -p "$HOST" | grep 'DLL Name' | grep -i -E 'libstdc|libgcc|winpthread|libgomp|libpng|jpeg|tiff|webp' || true)"; [ -z "$bad" ] || fail "runtime DLLs: $bad";;
+ MINGW*|MSYS*|CYGWIN*) bad="$(objdump -p "$HOST" | grep 'DLL Name' | grep -i -E 'libstdc|libgcc|winpthread|libgomp|libpng|jpeg|tiff|webp|sharpyuv|zlib|libz[.-]|magick|msys-|cygwin' || true)"; [ -z "$bad" ] || fail "runtime DLLs: $bad";;
 esac
 ok "platform static linkage"
 mkdir -p build images
