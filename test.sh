@@ -36,7 +36,7 @@ GEN=""; if [ ! -f "$BUILD_DIR/CMakeCache.txt" ] && command -v ninja >/dev/null 2
 ok "static release build"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
 ok "native pixel, codec and image mathematics oracles"
-[ "$("$HOST" --version)" = 'lmimg 0.1.1' ] || fail version
+[ "$("$HOST" --version)" = 'lmimg 0.1.2' ] || fail version
 ok "exact version"
 cp schema/lmimg.dsl.json "$WORK/schema"
 scripts/gen-schema.py >/dev/null
@@ -98,7 +98,12 @@ expect_error format 'let im=img.open("not-supported.svg");' 'format'
 expect_error opacity 'let a=img.canvas(2,2,1.0,1.0,1.0,1.0); a.blend(a,"over",2.0,0,0);' 'opacity'
 expect_error nonfinite 'let a=img.pattern(2,2,"sqrt(-1)","0","0","1");' 'finite'
 expect_error tilt_kernel 'let a=img.canvas(2,2,1.0,0.0,0.0,1.0); a.tilt_shift(img.eval("1e308"),0.25,0.75);' 'radius'
-ok "fifteen error paths report exit 3, JSON and one stderr diagnostic"
+expect_error colormap 'let a=img.canvas(2,2,1.0,0.0,0.0,1.0); a.colormap("rainbow");' 'colormap'
+expect_error clut 'let a=img.canvas(2,2,1.0,0.0,0.0,1.0); a.clut(a);' 'hald'
+expect_error hald_level 'let a=img.hald(17);' 'range'
+expect_error threshold 'let a=img.canvas(2,2,1.0,0.0,0.0,1.0); a.threshold(1.5);' 'threshold'
+expect_error noise_arity 'let a=img.pattern(2,2,"noise(x,y)","0","0","1");' 'argument'
+ok "twenty error paths report exit 3, JSON and one stderr diagnostic"
 
 # Independent-review repros stay explicit rather than relying only on gallery runs.
 review_run(){

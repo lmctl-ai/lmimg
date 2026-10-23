@@ -300,6 +300,130 @@ int main(int argc, char **argv) {
     Img montage = lmimg::montage({frame_a, frame_b}, 2, 2, {1, 1, 1, 1});
     check(montage.width() == 30 && montage.height() == 12, "montage geometry");
 
+    // v0.1.2 operations against closed-form answers.
+    {
+      Img ramp3 = Img::create(3, 1, {0, 0, 0, 1});
+      ramp3.set_pixel(0, 0, {0.2, 0.2, 0.2, 1})
+          .set_pixel(1, 0, {0.5, 0.5, 0.5, 1})
+          .set_pixel(2, 0, {0.8, 0.8, 0.8, 1});
+      Img thr = ramp3.clone();
+      thr.threshold(0.5);
+      check(thr.pixel(0, 0).r == 0 && thr.pixel(1, 0).r == 1 &&
+                thr.pixel(2, 0).g == 1,
+            "threshold is a luma step at the level");
+      Img inv = ramp3.clone();
+      inv.invert();
+      close(inv.pixel(0, 0).r, 0.8, 0.002, "invert 0.2 -> 0.8");
+      Img norm = ramp3.clone();
+      norm.normalize();
+      close(norm.pixel(0, 0).r, 0.0, 1e-9, "normalize lowest -> 0");
+      close(norm.pixel(1, 0).r, 0.5, 0.002, "normalize middle stays centered");
+      close(norm.pixel(2, 0).r, 1.0, 1e-9, "normalize highest -> 1");
+      Img eq = Img::create(4, 1, {0, 0, 0, 1});
+      eq.set_pixel(0, 0, {0.1, 0.1, 0.1, 1})
+          .set_pixel(1, 0, {0.1, 0.1, 0.1, 1})
+          .set_pixel(2, 0, {0.3, 0.3, 0.3, 1})
+          .set_pixel(3, 0, {0.9, 0.9, 0.9, 1});
+      eq.equalize();
+      // cdf = 2,3,4 over 4 pixels; first occupied bin maps to 0: (cdf-2)/2.
+      close(eq.pixel(0, 0).r, 0.0, 1e-9, "equalize first bin -> 0");
+      close(eq.pixel(2, 0).r, 0.5, 0.002, "equalize middle -> 0.5");
+      close(eq.pixel(3, 0).r, 1.0, 1e-9, "equalize last bin -> 1");
+      Img cm = ramp3.clone();
+      cm.colormap("heat");
+      close(cm.pixel(2, 0).r, 1.0, 0.002, "heat colormap bright end is warm");
+      check(cm.pixel(0, 0).r > cm.pixel(0, 0).b, "heat colormap dark end is red");
+      Img gr = ramp3.clone();
+      gr.colormap("gray");
+      close(gr.pixel(1, 0).g, 0.5, 0.002, "gray colormap is identity on luma");
+      bool bad_map = false;
+      try {
+        ramp3.clone().colormap("rainbow");
+      } catch (const std::invalid_argument &) {
+        bad_map = true;
+      }
+      check(bad_map, "unknown colormap name is rejected");
+      Img crgb = Img::create(1, 1, {0.5, 0.5, 0.5, 1});
+      crgb.curves_rgb({0, 0, 1, 1}, {0, 0, 0.5, 0.9, 1, 1}, {0, 1, 1, 0});
+      close(crgb.pixel(0, 0).r, 0.5, 0.002, "curves_rgb identity red");
+      close(crgb.pixel(0, 0).g, 0.9, 0.002, "curves_rgb green control point");
+      close(crgb.pixel(0, 0).b, 0.5, 0.002, "curves_rgb inverted blue");
+      Img hald = Img::hald(4);
+      check(hald.width() == 64 && hald.height() == 64, "hald level 4 is 64x64");
+      close(hald.pixel(15, 0).r, 1.0, 1e-9, "hald red axis ends at 1");
+      close(hald.pixel(16, 0).g, 1.0 / 15.0, 0.002, "hald green axis step");
+      close(hald.pixel(0, 1).g, 4.0 / 15.0, 0.002, "hald rows wrap the green axis");
+      close(hald.pixel(0, 4).b, 1.0 / 15.0, 0.002, "hald blue axis step");
+      Img probe = Img::create(2, 1, {0.3, 0.6, 0.9, 1});
+      probe.set_pixel(1, 0, {0.05, 0.5, 0.95, 0.5});
+      Img ident = probe.clone();
+      ident.clut(hald);
+      check(near(ident.pixel(0, 0), probe.pixel(0, 0), 0.004) &&
+                near(ident.pixel(1, 0), probe.pixel(1, 0), 0.004),
+            "identity hald clut is a no-op within quantization");
+      Img graded_hald = hald.clone();
+      graded_hald.invert();
+      Img via = probe.clone();
+      via.clut(graded_hald);
+      Img direct = probe.clone();
+      direct.invert();
+      check(near(via.pixel(0, 0), direct.pixel(0, 0), 0.01),
+            "graded hald reproduces the direct grade");
+      bool bad_hald = false;
+      try {
+        probe.clone().clut(probe);
+      } catch (const std::invalid_argument &) {
+        bad_hald = true;
+      }
+      check(bad_hald, "non-hald clut image is rejected");
+      Img div = Img::create(1, 1, {0.25, 0.5, 0.0, 1});
+      Img den = Img::create(1, 1, {0.5, 0.5, 0.0, 1});
+      div.blend(den, "divide");
+      close(div.pixel(0, 0).r, 0.5, 0.002, "divide 0.25/0.5");
+      close(div.pixel(0, 0).g, 1.0, 0.002, "divide 0.5/0.5");
+      close(div.pixel(0, 0).b, 1.0, 0.002, "divide by zero saturates");
+      check(Img::blend_mode("divide") && !Img::blend_mode("dodge"),
+            "blend mode vocabulary");
+      const double tw = Img::text_width("Hello", 32);
+      check(tw > 40 && tw < 120, "text_width of Hello at 32px is plausible");
+      close(Img::text_width("Hello\nHi", 32), tw, 1e-9,
+            "text_width reports the widest line");
+      close(Img::text_width("HelloHello", 32), 2 * tw, 1e-9,
+            "text_width is additive in advances");
+      // Blur must feather alpha without bleeding transparent color.
+      Img glow = Img::create(21, 21, {0, 0, 0, 0});
+      glow.rect(8, 8, 4, 4, {1, 0, 0, 1});
+      Img before_blur = glow.clone();
+      close(before_blur.pixel(8, 10).r, 1.0, 1e-9,
+            "zero-width stroke leaves no hairline on a rectangle edge");
+      glow.blur(0, 1.5);
+      const Color g_center = glow.pixel(10, 10), g_edge = glow.pixel(7, 10);
+      check(g_center.a < 0.95 && g_center.a > 0.5, "blur feathers center alpha");
+      check(g_edge.a > 0.1 && g_edge.a < 0.6, "blur spreads alpha outward");
+      close(g_center.r, 1.0, 0.004, "blurred center keeps pure red");
+      close(g_edge.r, 1.0, 0.004, "blurred fringe keeps pure red");
+      close(glow.pixel(2, 10).a, 0.0, 1e-9, "far pixels stay transparent");
+      Img disc = Img::create(21, 21, {1, 1, 1, 1});
+      disc.circle(10, 10, 6, {0, 0, 1, 1});
+      check(near(disc.pixel(4, 10), {0, 0, 1, 1}, 0.004),
+            "zero-width stroke leaves no hairline on a circle edge");
+      // Healing follows local shading: a blemish on a linear gradient is
+      // restored to the gradient itself (planar fit), not to a flat mean.
+      Img slope = Img::pattern(40, 30, "0.2+0.6*x", "0.8-0.5*y", "0.5");
+      Img damaged = slope.clone();
+      damaged.rect(15, 10, 8, 6, {0, 0, 0, 1});
+      damaged.heal(14, 9, 11, 9, 4);
+      check(damaged.psnr(slope) > 45, "planar heal restores a gradient");
+      check(near(damaged.pixel(19, 12), slope.pixel(19, 12), 0.01),
+            "healed center matches the gradient");
+      Img n1 = Img::pattern(8, 8, "hash(x,y,1)", "noise(4*x,4*y,2)", "0");
+      Img n2 = Img::pattern(8, 8, "hash(x,y,1)", "noise(4*x,4*y,2)", "0");
+      check(std::isinf(n1.psnr(n2)), "hash and noise are deterministic");
+      check(n1.pixel(0, 0).r != n1.pixel(1, 0).r, "hash varies per pixel");
+      auto n_stats = n1.stats();
+      check(n_stats.minimum.g >= 0 && n_stats.maximum.g <= 1,
+            "noise stays inside [0,1]");
+    }
     std::ofstream histogram(dir / "histogram.csv");
     histogram << solid.histogram_csv();
     check(histogram.good(), "histogram CSV");

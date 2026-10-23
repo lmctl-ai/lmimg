@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(lmimg VERSION 0.1.1 LANGUAGES C CXX)
+project(lmimg VERSION 0.1.2 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -153,7 +153,7 @@ endif()
 set(IM_CONFIG_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/deps.lock"
   "${CMAKE_SYSTEM_NAME}|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID}|${CMAKE_CXX_COMPILER_ID}"
-  "${CODEC_PKGCONFIG_DIR}|MAGICKCORE_HDRI_ENABLE=0|MAGICKCORE_QUANTUM_DEPTH=8|MAGICKCORE_CHANNEL_MASK_DEPTH=32|static-pkgconfig-v2|sharpyuv|mingw-stat-source-v1")
+  "${CODEC_PKGCONFIG_DIR}|MAGICKCORE_HDRI_ENABLE=0|MAGICKCORE_QUANTUM_DEPTH=8|MAGICKCORE_CHANNEL_MASK_DEPTH=32|static-pkgconfig-v2|sharpyuv|mingw-stat-source-v1|no-autodetect-delegates-v1")
 string(SHA256 IM_CONFIG_KEY "${IM_CONFIG_INPUTS}")
 set(IM_NEEDS_CONFIGURE TRUE)
 if(EXISTS "${IM_CONFIGURED}")
@@ -224,6 +224,11 @@ execute_process(
     --with-png=yes --with-jpeg=yes --with-tiff=yes --with-webp=yes
     --with-zlib=yes --without-freetype --without-zstd --without-lzma
     --without-jbig --without-openjp2 --without-brotli
+    # Auto-detected delegates that must never be picked up from a developer
+    # host (pango is LGPL, graphviz is EPL; the rest are simply out of scope).
+    --without-pango --without-gvc --without-zip --without-dmr
+    --without-autotrace --without-dps --without-flif --without-fpx
+    --without-rsvg --without-uhdr
   WORKING_DIRECTORY "${IM_BUILD}"
   RESULT_VARIABLE IM_CONFIGURE_RESULT)
 if(NOT IM_CONFIGURE_RESULT EQUAL 0)
@@ -254,6 +259,15 @@ file(READ "${IM_CONFIG_HEADER}" IM_CONFIG_TEXT)
 foreach(delegate PNG JPEG TIFF WEBP ZLIB)
   if(NOT IM_CONFIG_TEXT MATCHES "#define[ \t]+${delegate}_DELEGATE[ \t]+1")
     message(FATAL_ERROR "ImageMagick ${delegate} delegate was not detected; check pinned codec prefix and pkg-config")
+  endif()
+endforeach()
+# The converse matters for license hygiene: nothing beyond those five (plus
+# libwebp's own mux helper) may have been auto-detected on the build host.
+string(REGEX MATCHALL "#define[ \t]+([A-Z0-9_]+)_DELEGATE[ \t]+1" IM_DELEGATE_LINES "${IM_CONFIG_TEXT}")
+foreach(line ${IM_DELEGATE_LINES})
+  string(REGEX REPLACE "#define[ \t]+([A-Z0-9_]+)_DELEGATE[ \t]+1" "\\1" delegate "${line}")
+  if(NOT delegate MATCHES "^(PNG|JPEG|TIFF|WEBP|WEBPMUX|ZLIB)$")
+    message(FATAL_ERROR "ImageMagick picked up an unexpected delegate on this host: ${delegate}. Only PNG, JPEG, TIFF, WEBP and ZLIB are permitted.")
   endif()
 endforeach()
 message(STATUS "ImageMagick delegates: PNG JPEG TIFF WEBP ZLIB (static)")

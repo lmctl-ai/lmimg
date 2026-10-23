@@ -234,6 +234,28 @@ void kernel_peak(double radius, double sigma) {
 double lum(const double *p) {
   return .2126 * p[0] + .7152 * p[1] + .0722 * p[2];
 }
+// Bilinear RGBA sample at continuous pixel coordinates (fx, fy), computed on
+// premultiplied color so transparent neighbours do not darken edges. The
+// coordinates must already lie inside [0,w-1] x [0,h-1].
+void sample_bilinear(const std::vector<double> &a, size_t w, size_t h,
+                     double fx, double fy, double *out) {
+  size_t x0 = size_t(std::floor(fx)), y0 = size_t(std::floor(fy));
+  size_t x1 = std::min(w - 1, x0 + 1), y1 = std::min(h - 1, y0 + 1);
+  x0 = std::min(w - 1, x0);
+  y0 = std::min(h - 1, y0);
+  double tx = fx - double(x0), ty = fy - double(y0);
+  const double *p00 = &a[(y0 * w + x0) * 4], *p10 = &a[(y0 * w + x1) * 4],
+               *p01 = &a[(y1 * w + x0) * 4], *p11 = &a[(y1 * w + x1) * 4];
+  double w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty,
+         w11 = tx * ty;
+  double alpha = w00 * p00[3] + w10 * p10[3] + w01 * p01[3] + w11 * p11[3];
+  for (int k = 0; k < 3; k++) {
+    double prem = w00 * p00[k] * p00[3] + w10 * p10[k] * p10[3] +
+                  w01 * p01[k] * p01[3] + w11 * p11[k] * p11[3];
+    out[k] = alpha > 1e-12 ? prem / alpha : 0;
+  }
+  out[3] = alpha;
+}
 void to_hsl(double r, double g, double b, double &h, double &s, double &l) {
   double hi = std::max({r, g, b}), lo = std::min({r, g, b}), d = hi - lo;
   l = (hi + lo) / 2;
@@ -520,7 +542,8 @@ Image &Image::levels(double black, double gamma, double white) {
     });
   });
 }
-Image &Image::curves(const std::vector<double> &cp) {
+namespace {
+void valid_curve(const std::vector<double> &cp) {
   if (cp.size() < 4 || cp.size() % 2 || cp.front() != 0 ||
       cp[cp.size() - 2] != 1)
     throw std::invalid_argument("curves needs endpoints at 0 and 1");
@@ -529,23 +552,213 @@ Image &Image::curves(const std::vector<double> &cp) {
         (i % 2 == 0 && i && cp[i] <= cp[i - 2]))
       throw std::invalid_argument(
           "curve points must be finite and ordered in [0,1]");
+}
+double curve_at(const std::vector<double> &cp, double x) {
+  x = clip(x);
+  if (x >= cp[cp.size() - 2])
+    return clip(cp.back());
+  for (size_t j = 0; j + 2 < cp.size(); j += 2)
+    if (x <= cp[j + 2]) {
+      double t = (x - cp[j]) / (cp[j + 2] - cp[j]);
+      return clip(cp[j + 1] * (1 - t) + cp[j + 3] * t);
+    }
+  return clip(cp[1]);
+}
+} // namespace
+Image &Image::curves(const std::vector<double> &cp) {
+  return curves_rgb(cp, cp, cp);
+}
+Image &Image::curves_rgb(const std::vector<double> &r,
+                         const std::vector<double> &g,
+                         const std::vector<double> &b) {
+  valid_curve(r);
+  valid_curve(g);
+  valid_curve(b);
+  const std::vector<double> *cp[3] = {&r, &g, &b};
   return mutate([&](MagickWand *p) {
     std::vector<double> a;
     export_rgba(p, a);
     for (size_t i = 0; i < a.size(); i += 4)
+      for (int k = 0; k < 3; k++)
+        a[i + k] = curve_at(*cp[k], a[i + k]);
+    import_rgba(p, a);
+  });
+}
+Image &Image::threshold(double level) {
+  if (!std::isfinite(level) || level < 0 || level > 1)
+    throw std::invalid_argument("threshold level must be in [0,1]");
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a;
+    export_rgba(p, a);
+    for (size_t i = 0; i < a.size(); i += 4) {
+      double v = lum(&a[i]) >= level ? 1 : 0;
+      a[i] = a[i + 1] = a[i + 2] = v;
+    }
+    import_rgba(p, a);
+  });
+}
+Image &Image::invert() {
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a;
+    export_rgba(p, a);
+    for (size_t i = 0; i < a.size(); i += 4)
+      for (int k = 0; k < 3; k++)
+        a[i + k] = 1 - clip(a[i + k]);
+    import_rgba(p, a);
+  });
+}
+Image &Image::normalize() {
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a;
+    export_rgba(p, a);
+    double lo[3] = {1, 1, 1}, hi[3] = {0, 0, 0};
+    for (size_t i = 0; i < a.size(); i += 4)
       for (int k = 0; k < 3; k++) {
-        double x = clip(a[i + k]), y = cp[1];
-        if (x >= cp[cp.size() - 2])
-          y = cp.back();
-        else
-          for (size_t j = 0; j + 2 < cp.size(); j += 2)
-            if (x <= cp[j + 2]) {
-              double t = (x - cp[j]) / (cp[j + 2] - cp[j]);
-              y = cp[j + 1] * (1 - t) + cp[j + 3] * t;
-              break;
-            }
-        a[i + k] = clip(y);
+        lo[k] = std::min(lo[k], a[i + k]);
+        hi[k] = std::max(hi[k], a[i + k]);
       }
+    for (size_t i = 0; i < a.size(); i += 4)
+      for (int k = 0; k < 3; k++)
+        if (hi[k] > lo[k])
+          a[i + k] = clip((a[i + k] - lo[k]) / (hi[k] - lo[k]));
+    import_rgba(p, a);
+  });
+}
+Image &Image::equalize() {
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a;
+    export_rgba(p, a);
+    // Equalize the luma histogram and scale RGB by the luma ratio, so hues
+    // are preserved (per-channel equalization posterizes color).
+    const size_t n = a.size() / 4;
+    std::vector<size_t> bins(256, 0);
+    std::vector<double> luma(n);
+    for (size_t i = 0; i < n; i++) {
+      luma[i] = clip(lum(&a[i * 4]));
+      bins[size_t(std::lround(255 * luma[i]))]++;
+    }
+    std::vector<double> cdf(256, 0);
+    size_t run = 0, first = 0;
+    bool seen = false;
+    for (int v = 0; v < 256; v++) {
+      run += bins[v];
+      if (!seen && bins[v]) {
+        seen = true;
+        first = run;
+      }
+      cdf[v] = double(run);
+    }
+    // Classic equalization: map through the normalized cumulative histogram
+    // so the first occupied bin lands on 0 and the last on 1.
+    double span = double(n) - double(first);
+    for (size_t i = 0; i < n; i++) {
+      int v = int(std::lround(255 * luma[i]));
+      double target = span > 0 ? clip((cdf[v] - double(first)) / span) : 0;
+      double ratio = luma[i] > 1e-9 ? target / luma[i] : 0;
+      for (int k = 0; k < 3; k++)
+        a[i * 4 + k] = luma[i] > 1e-9 ? clip(a[i * 4 + k] * ratio) : target;
+    }
+    import_rgba(p, a);
+  });
+}
+Image &Image::colormap(const std::string &name) {
+  // Anchor colors at equally spaced positions in [0,1], linearly interpolated.
+  static const std::vector<std::array<double, 3>> gray = {{0, 0, 0}, {1, 1, 1}},
+      heat = {{0, 0, 0}, {0.75, 0, 0}, {1, 0.6, 0}, {1, 1, 0.25}, {1, 1, 1}},
+      viridis = {{0.267, 0.005, 0.329},
+                 {0.229, 0.322, 0.546},
+                 {0.127, 0.567, 0.551},
+                 {0.369, 0.789, 0.383},
+                 {0.993, 0.906, 0.144}},
+      coolwarm = {{0.230, 0.299, 0.754},
+                  {0.865, 0.865, 0.865},
+                  {0.706, 0.016, 0.150}};
+  const std::vector<std::array<double, 3>> *lut =
+      name == "gray"       ? &gray
+      : name == "heat"     ? &heat
+      : name == "viridis"  ? &viridis
+      : name == "coolwarm" ? &coolwarm
+                           : nullptr;
+  if (!lut)
+    throw std::invalid_argument(
+        "colormap must be gray, heat, viridis or coolwarm");
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a;
+    export_rgba(p, a);
+    const double segments = double(lut->size() - 1);
+    for (size_t i = 0; i < a.size(); i += 4) {
+      double t = clip(lum(&a[i])) * segments;
+      size_t j = std::min(lut->size() - 2, size_t(std::floor(t)));
+      double f = t - double(j);
+      for (int k = 0; k < 3; k++)
+        a[i + k] = clip((*lut)[j][k] * (1 - f) + (*lut)[j + 1][k] * f);
+    }
+    import_rgba(p, a);
+  });
+}
+Image Image::hald(std::size_t level) {
+  if (level < 2 || level > 16)
+    throw std::invalid_argument("hald level must be in [2,16]");
+  const size_t cube = level * level, side = cube * level;
+  valid_size(side, side);
+  membudget::require(side * side * 4 * sizeof(double));
+  std::vector<double> px(side * side * 4);
+  const double den = double(cube - 1);
+  for (size_t i = 0; i < side * side; i++) {
+    px[i * 4] = double(i % cube) / den;
+    px[i * 4 + 1] = double((i / cube) % cube) / den;
+    px[i * 4 + 2] = double(i / (cube * cube)) / den;
+    px[i * 4 + 3] = 1;
+  }
+  Image out = create(side, side);
+  ok(MagickSetImageAlphaChannel(out.impl_->wand, ActivateAlphaChannel),
+     out.impl_->wand, "activate alpha");
+  ok(MagickImportImagePixels(out.impl_->wand, 0, 0, side, side, "RGBA",
+                             DoublePixel, px.data()),
+     out.impl_->wand, "import hald pixels");
+  return out;
+}
+Image &Image::clut(const Image &h) {
+  h.require_image();
+  size_t level = 0;
+  for (size_t l = 2; l <= 16; l++)
+    if (l * l * l == h.width())
+      level = l;
+  if (!level || h.width() != h.height())
+    throw std::invalid_argument(
+        "clut needs a square Hald image whose side is level^3 (level 2-16)");
+  const size_t cube = level * level;
+  return mutate([&](MagickWand *p) {
+    std::vector<double> a, t;
+    export_rgba(p, a);
+    export_rgba(h.impl_->wand, t);
+    auto sample = [&](size_t r, size_t g, size_t b, int k) {
+      return t[(r + g * cube + b * cube * cube) * 4 + size_t(k)];
+    };
+    const double den = double(cube - 1);
+    for (size_t i = 0; i < a.size(); i += 4) {
+      double c[3], f[3];
+      size_t i0[3], i1[3];
+      for (int k = 0; k < 3; k++) {
+        c[k] = clip(a[i + k]) * den;
+        i0[k] = std::min(cube - 1, size_t(std::floor(c[k])));
+        i1[k] = std::min(cube - 1, i0[k] + 1);
+        f[k] = c[k] - double(i0[k]);
+      }
+      for (int k = 0; k < 3; k++) {
+        double c00 = sample(i0[0], i0[1], i0[2], k) * (1 - f[0]) +
+                     sample(i1[0], i0[1], i0[2], k) * f[0];
+        double c10 = sample(i0[0], i1[1], i0[2], k) * (1 - f[0]) +
+                     sample(i1[0], i1[1], i0[2], k) * f[0];
+        double c01 = sample(i0[0], i0[1], i1[2], k) * (1 - f[0]) +
+                     sample(i1[0], i0[1], i1[2], k) * f[0];
+        double c11 = sample(i0[0], i1[1], i1[2], k) * (1 - f[0]) +
+                     sample(i1[0], i1[1], i1[2], k) * f[0];
+        double c0 = c00 * (1 - f[1]) + c10 * f[1],
+               c1 = c01 * (1 - f[1]) + c11 * f[1];
+        a[i + k] = clip(c0 * (1 - f[2]) + c1 * f[2]);
+      }
+    }
     import_rgba(p, a);
   });
 }
@@ -610,8 +823,32 @@ Image &Image::sepia(double strength) {
 }
 Image &Image::blur(double r, double sigma) {
   kernel_peak(r, sigma);
+  // Unlike sharpen/edges, blur acts on all four channels so that a layer with
+  // transparency (a shadow or glow) feathers its alpha. The convolution runs
+  // on premultiplied color so transparent pixels never bleed their color.
   return mutate([&](MagickWand *p) {
-    rgb_filter(p, [&] { ok(MagickBlurImage(p, r, sigma), p, "blur"); });
+    std::vector<double> a;
+    export_rgba(p, a);
+    bool opaque = true;
+    for (size_t i = 3; i < a.size(); i += 4)
+      if (a[i] < 1) {
+        opaque = false;
+        break;
+      }
+    if (!opaque) {
+      for (size_t i = 0; i < a.size(); i += 4)
+        for (int k = 0; k < 3; k++)
+          a[i + k] *= a[i + 3];
+      import_rgba(p, a);
+    }
+    ok(MagickBlurImage(p, r, sigma), p, "blur");
+    if (!opaque) {
+      export_rgba(p, a);
+      for (size_t i = 0; i < a.size(); i += 4)
+        for (int k = 0; k < 3; k++)
+          a[i + k] = a[i + 3] > 1e-9 ? clip(a[i + k] / a[i + 3]) : 0;
+      import_rgba(p, a);
+    }
   });
 }
 Image &Image::sharpen(double r, double sigma) {
@@ -778,23 +1015,63 @@ Image &Image::heal(std::size_t x, std::size_t y, std::size_t w, std::size_t h,
   return mutate([&](MagickWand *p) {
     std::vector<double> a;
     export_rgba(p, a);
-    double sum[3] = {}, n = 0;
+    // Fit a plane c + gx*(xx-cx) + gy*(yy-cy) per channel to the ring around
+    // the region (least squares), so healed patches follow local shading
+    // instead of leaving a flat spot. Falls back to the mean when the ring is
+    // too thin to determine a slope.
+    const double cx = double(x) + double(w) / 2, cy = double(y) + double(h) / 2;
+    double sxx = 0, syy = 0, sxy = 0, sx = 0, sy = 0, n = 0;
+    double sv[3] = {}, svx[3] = {}, svy[3] = {};
     size_t x0 = x > radius ? x - radius : 0, y0 = y > radius ? y - radius : 0,
            x1 = std::min(width(), x + w + radius),
            y1 = std::min(height(), y + h + radius);
     for (size_t yy = y0; yy < y1; yy++)
       for (size_t xx = x0; xx < x1; xx++)
         if (xx < x || xx >= x + w || yy < y || yy >= y + h) {
-          for (int k = 0; k < 3; k++)
-            sum[k] += a[(yy * width() + xx) * 4 + k];
+          double dx = double(xx) - cx, dy = double(yy) - cy;
+          sxx += dx * dx;
+          syy += dy * dy;
+          sxy += dx * dy;
+          sx += dx;
+          sy += dy;
           n++;
+          for (int k = 0; k < 3; k++) {
+            double v = a[(yy * width() + xx) * 4 + k];
+            sv[k] += v;
+            svx[k] += v * dx;
+            svy[k] += v * dy;
+          }
         }
     if (!n)
       throw std::runtime_error("healing region has no boundary");
-    for (size_t yy = y; yy < y + h; yy++)
-      for (size_t xx = x; xx < x + w; xx++)
-        for (int k = 0; k < 3; k++)
-          a[(yy * width() + xx) * 4 + k] = sum[k] / n;
+    // Normal equations for [c, gx, gy]: symmetric 3x3 solved by Cramer's rule.
+    double m[3][3] = {{n, sx, sy}, {sx, sxx, sxy}, {sy, sxy, syy}};
+    auto det3 = [](double q[3][3]) {
+      return q[0][0] * (q[1][1] * q[2][2] - q[1][2] * q[2][1]) -
+             q[0][1] * (q[1][0] * q[2][2] - q[1][2] * q[2][0]) +
+             q[0][2] * (q[1][0] * q[2][1] - q[1][1] * q[2][0]);
+    };
+    double d = det3(m);
+    for (int k = 0; k < 3; k++) {
+      double c = sv[k] / n, gx = 0, gy = 0;
+      if (std::abs(d) > 1e-9 * std::max(1.0, n * n * n)) {
+        double rhs[3] = {sv[k], svx[k], svy[k]}, sol[3];
+        for (int j = 0; j < 3; j++) {
+          double t[3][3];
+          for (int r = 0; r < 3; r++)
+            for (int cidx = 0; cidx < 3; cidx++)
+              t[r][cidx] = cidx == j ? rhs[r] : m[r][cidx];
+          sol[j] = det3(t) / d;
+        }
+        c = sol[0];
+        gx = sol[1];
+        gy = sol[2];
+      }
+      for (size_t yy = y; yy < y + h; yy++)
+        for (size_t xx = x; xx < x + w; xx++)
+          a[(yy * width() + xx) * 4 + k] =
+              clip(c + gx * (double(xx) - cx) + gy * (double(yy) - cy));
+    }
     import_rgba(p, a);
   });
 }
@@ -870,12 +1147,9 @@ Image &Image::perspective(double tlx, double tly, double trx, double try_,
         if (!std::isfinite(xx) || !std::isfinite(yy) || xx < -1e-10 ||
             yy < -1e-10 || xx > 1 + 1e-10 || yy > 1 + 1e-10)
           continue;
-        size_t ix = std::min(w - 1, size_t(std::lround(std::clamp(xx, 0., 1.) *
-                                                       (w - 1)))),
-               iy = std::min(h - 1, size_t(std::lround(std::clamp(yy, 0., 1.) *
-                                                       (h - 1))));
-        for (int k = 0; k < 4; k++)
-          o[(y * w + x) * 4 + k] = a[(iy * w + ix) * 4 + k];
+        sample_bilinear(a, w, h, std::clamp(xx, 0., 1.) * double(w - 1),
+                        std::clamp(yy, 0., 1.) * double(h - 1),
+                        &o[(y * w + x) * 4]);
       }
     import_rgba(p, o);
   });
@@ -893,24 +1167,29 @@ Image &Image::lens(double d) {
       for (size_t x = 0; x < w; x++) {
         double nx = (x - cx) / s, ny = (y - cy) / s,
                f = 1 + d * (nx * nx + ny * ny);
-        double fx = std::clamp(cx + nx * f * s, 0., double(w - 1)),
-               fy = std::clamp(cy + ny * f * s, 0., double(h - 1));
-        size_t sx = size_t(std::lround(fx)), sy = size_t(std::lround(fy));
-        for (int k = 0; k < 4; k++)
-          o[(y * w + x) * 4 + k] = a[(sy * w + sx) * 4 + k];
+        double fx = cx + nx * f * s, fy = cy + ny * f * s;
+        // Samples that fall outside the frame stay transparent instead of
+        // smearing the border pixels across the corners.
+        if (fx < 0 || fy < 0 || fx > double(w - 1) || fy > double(h - 1))
+          continue;
+        sample_bilinear(a, w, h, fx, fy, &o[(y * w + x) * 4]);
       }
     import_rgba(p, o);
   });
 }
 
+bool Image::blend_mode(const std::string &mode) noexcept {
+  return mode == "over" || mode == "multiply" || mode == "screen" ||
+         mode == "overlay" || mode == "difference" || mode == "darken" ||
+         mode == "lighten" || mode == "addition" || mode == "subtract" ||
+         mode == "divide";
+}
 Image &Image::blend(const Image &o, const std::string &mode, double opacity,
                     std::size_t x, std::size_t y) {
   o.require_image();
   if (!std::isfinite(opacity) || opacity < 0 || opacity > 1)
     throw std::invalid_argument("opacity must be in [0,1]");
-  if (mode != "over" && mode != "multiply" && mode != "screen" &&
-      mode != "overlay" && mode != "difference" && mode != "darken" &&
-      mode != "lighten" && mode != "addition" && mode != "subtract")
+  if (!blend_mode(mode))
     throw std::invalid_argument("unsupported blend mode");
   return mutate([&](MagickWand *p) {
     size_t w = MagickGetImageWidth(p), h = MagickGetImageHeight(p),
@@ -936,9 +1215,10 @@ Image &Image::blend(const Image &o, const std::string &mode, double opacity,
                                        : mode == "darken" ? std::min(cb, cs)
                                        : mode == "lighten" ? std::max(cb, cs)
                                        : mode == "addition" ? std::min(1., cb + cs)
-                                                             : mode == "subtract"
-                                                                   ? std::max(0., cb - cs)
-                                                                   : cs;
+                                       : mode == "subtract" ? std::max(0., cb - cs)
+                                       : mode == "divide"
+                                           ? (cs > 0 ? std::min(1., cb / cs) : 1.)
+                                           : cs;
           double prem = as * (1 - ab) * cs + as * ab * mix + (1 - as) * ab * cb;
           a[di + k] = ao > 1e-15 ? clip(prem / ao) : 0;
         }
@@ -956,6 +1236,8 @@ Image &Image::rect(double x, double y, double w, double h, Color fill,
     if (!d)
       throw std::runtime_error("drawing allocation failed");
     color_draw(d, fill);
+    if (!(sw > 0))
+      stroke.a = 0; // a zero-width stroke must not leave a hairline outline
     std::unique_ptr<PixelWand, decltype(&DestroyPixelWand)> q(
         color_wand(stroke), DestroyPixelWand);
     DrawSetStrokeColor(d, q.get());
@@ -973,6 +1255,8 @@ Image &Image::circle(double x, double y, double r, Color fill, Color stroke,
     if (!d)
       throw std::runtime_error("drawing allocation failed");
     color_draw(d, fill);
+    if (!(sw > 0))
+      stroke.a = 0;
     std::unique_ptr<PixelWand, decltype(&DestroyPixelWand)> q(
         color_wand(stroke), DestroyPixelWand);
     DrawSetStrokeColor(d, q.get());
@@ -1072,6 +1356,35 @@ Image &Image::text(double x, double y, const std::string &value, double size,
     throw std::runtime_error("embedded font is unavailable in this build");
 #endif
   });
+}
+double Image::text_width(const std::string &value, double size) {
+  if (size <= 0 || size > 4096 || !std::isfinite(size) ||
+      value.size() > 65536 ||
+      std::any_of(value.begin(), value.end(),
+                  [](unsigned char ch) { return ch >= 128; }))
+    throw std::invalid_argument(
+        "text_width requires a finite size in (0,4096] and ASCII text");
+#if LMIMG_EMBEDDED_FONT
+  stbtt_fontinfo fi;
+  if (!stbtt_InitFont(&fi, embedded_font,
+                      stbtt_GetFontOffsetForIndex(embedded_font, 0)))
+    throw std::runtime_error("embedded font initialization failed");
+  float scale = stbtt_ScaleForPixelHeight(&fi, float(size));
+  long widest = 0, pen = 0;
+  for (unsigned char ch : value) {
+    if (ch == '\n') {
+      widest = std::max(widest, pen);
+      pen = 0;
+      continue;
+    }
+    int adv, lsb;
+    stbtt_GetCodepointHMetrics(&fi, ch, &adv, &lsb);
+    pen += std::lround(adv * scale); // identical advance rounding to text()
+  }
+  return double(std::max(widest, pen));
+#else
+  throw std::runtime_error("embedded font is unavailable in this build");
+#endif
 }
 Image &Image::metadata(const std::string &k, const std::string &v) {
   if (k.empty() || k.size() > 256 || v.size() > 65536 ||

@@ -20,6 +20,58 @@
             "returns": "Image"
           }
         ],
+        "curves_rgb": [
+          {
+            "params": [
+              "Curve",
+              "Curve",
+              "Curve"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "threshold": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "invert": [
+          {
+            "params": [],
+            "returns": "Image"
+          }
+        ],
+        "normalize": [
+          {
+            "params": [],
+            "returns": "Image"
+          }
+        ],
+        "equalize": [
+          {
+            "params": [],
+            "returns": "Image"
+          }
+        ],
+        "colormap": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "clut": [
+          {
+            "params": [
+              "Image"
+            ],
+            "returns": "Image"
+          }
+        ],
         "hsl": [
           {
             "params": [
@@ -423,6 +475,23 @@
           {
             "params": [],
             "returns": "Curve"
+          }
+        ],
+        "hald": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "Image"
+          }
+        ],
+        "text_width": [
+          {
+            "params": [
+              "string",
+              "float"
+            ],
+            "returns": "float"
           }
         ],
         "layers": [

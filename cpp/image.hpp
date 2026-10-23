@@ -45,6 +45,22 @@ public:
   Image &flip(bool horizontal = false);
   Image &levels(double black, double gamma, double white);
   Image &curves(const std::vector<double> &control_points);
+  // One piecewise-linear curve per RGB channel (same control-point format).
+  Image &curves_rgb(const std::vector<double> &red,
+                    const std::vector<double> &green,
+                    const std::vector<double> &blue);
+  // Binary luma threshold: Rec.709 luma >= level becomes white, else black.
+  Image &threshold(double level);
+  Image &invert();
+  // Per-channel linear stretch of RGB to [0,1] (GIMP "Stretch Contrast").
+  Image &normalize();
+  // Per-channel 256-bin histogram equalization.
+  Image &equalize();
+  // False color: luma through a named palette (gray, heat, viridis, coolwarm).
+  Image &colormap(const std::string &name);
+  // Apply a Hald color lookup table (an image produced by hald(level) and
+  // then graded) with trilinear interpolation.
+  Image &clut(const Image &hald);
   Image &hsl(double hue_degrees, double saturation_scale = 1.0,
              double lightness_scale = 1.0);
   Image &channel_mix(const std::array<double, 9> &matrix);
@@ -90,6 +106,12 @@ public:
   static Image pattern(std::size_t width, std::size_t height,
                        const std::string &red, const std::string &green,
                        const std::string &blue, const std::string &alpha = "1");
+  // Identity Hald CLUT of the given level (2..16): a level^3 square image
+  // holding level^2 samples per RGB axis.
+  static Image hald(std::size_t level);
+  // Advance width in pixels of ASCII text in the embedded font (widest line).
+  static double text_width(const std::string &value, double point_size);
+  static bool blend_mode(const std::string &mode) noexcept;
 
 private:
   friend class Animation;

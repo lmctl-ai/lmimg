@@ -148,6 +148,59 @@ void register_host(dslvm::Registry &r, Host &h) {
           image(p).curves(static_cast<Curve *>(a[0].obj)->points);
           return Value::object("Image", p);
         });
+  check(r, "Image", "curves_rgb", {"Curve", "Curve", "Curve"}, "Image",
+        [&h](void *p, Args &a) -> Value {
+          (void)h;
+          image(p).curves_rgb(static_cast<Curve *>(a[0].obj)->points,
+                              static_cast<Curve *>(a[1].obj)->points,
+                              static_cast<Curve *>(a[2].obj)->points);
+          return Value::object("Image", p);
+        });
+  check(r, "Image", "threshold", {"float"}, "Image",
+        [&h](void *p, Args &a) -> Value {
+          (void)h;
+          image(p).threshold(a[0].f);
+          return Value::object("Image", p);
+        });
+  check(r, "Image", "invert", {}, "Image", [&h](void *p, Args &a) -> Value {
+    (void)h;
+    (void)a;
+    image(p).invert();
+    return Value::object("Image", p);
+  });
+  check(r, "Image", "normalize", {}, "Image", [&h](void *p, Args &a) -> Value {
+    (void)h;
+    (void)a;
+    image(p).normalize();
+    return Value::object("Image", p);
+  });
+  check(r, "Image", "equalize", {}, "Image", [&h](void *p, Args &a) -> Value {
+    (void)h;
+    (void)a;
+    image(p).equalize();
+    return Value::object("Image", p);
+  });
+  check(r, "Image", "colormap", {"string"}, "Image",
+        [&h](void *p, Args &a) -> Value {
+          (void)h;
+          image(p).colormap(a[0].s);
+          return Value::object("Image", p);
+        });
+  check(r, "Image", "clut", {"Image"}, "Image", [&h](void *p, Args &a) -> Value {
+    (void)h;
+    image(p).clut(image(a[0].obj));
+    return Value::object("Image", p);
+  });
+  check(r, "Img", "hald", {"int"}, "Image", [&h](void *p, Args &a) -> Value {
+    (void)p;
+    return h.image(Image::hald(integer(a[0], 2, 16)));
+  });
+  check(r, "Img", "text_width", {"string", "float"}, "float",
+        [&h](void *p, Args &a) -> Value {
+          (void)h;
+          (void)p;
+          return Value::real(Image::text_width(a[0].s, a[1].f));
+        });
   check(r, "Image", "hsl", {"float", "float", "float"}, "Image",
         [&h](void *p, Args &a) -> Value {
           (void)h;
@@ -237,10 +290,7 @@ void register_host(dslvm::Registry &r, Host &h) {
           (void)a;
           if (a[2].f < 0 || a[2].f > 1)
             throw dslvm::Error("layer opacity must be in [0,1]");
-          if (a[1].s != "over" && a[1].s != "multiply" && a[1].s != "screen" &&
-              a[1].s != "overlay" && a[1].s != "difference" &&
-              a[1].s != "darken" && a[1].s != "lighten" &&
-              a[1].s != "addition" && a[1].s != "subtract")
+          if (!Image::blend_mode(a[1].s))
             throw dslvm::Error("unsupported layer blend");
           auto &stack = *static_cast<LayerStack *>(p);
           stack.layers.push_back({image(a[0].obj).clone(), a[1].s, a[2].f,
@@ -255,10 +305,7 @@ void register_host(dslvm::Registry &r, Host &h) {
           (void)a;
           if (a[3].f < 0 || a[3].f > 1)
             throw dslvm::Error("layer opacity must be in [0,1]");
-          if (a[2].s != "over" && a[2].s != "multiply" && a[2].s != "screen" &&
-              a[2].s != "overlay" && a[2].s != "difference" &&
-              a[2].s != "darken" && a[2].s != "lighten" &&
-              a[2].s != "addition" && a[2].s != "subtract")
+          if (!Image::blend_mode(a[2].s))
             throw dslvm::Error("unsupported layer blend");
           auto &stack = *static_cast<LayerStack *>(p);
           auto im = image(a[0].obj).clone();

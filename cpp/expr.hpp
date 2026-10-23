@@ -4,7 +4,10 @@
 #pragma once
 #include <cctype>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -66,6 +69,43 @@ private:
       return f(a->eval(v), b->eval(v));
     }
   };
+  struct Tern : Node {
+    std::function<double(double, double, double)> f;
+    P a, b, c;
+    double eval(const double *v) const override {
+      return f(a->eval(v), b->eval(v), c->eval(v));
+    }
+  };
+  // Deterministic white noise in [0,1): a splitmix64-style mix of the IEEE
+  // bit patterns of (x, y, seed), identical on every platform.
+  static double hash01(double x, double y, double seed) {
+    auto bits = [](double d) {
+      std::uint64_t u;
+      std::memcpy(&u, &d, sizeof u);
+      return u;
+    };
+    std::uint64_t h = bits(x) * 0x9E3779B97F4A7C15ull;
+    h ^= (bits(y) + 0x7F4A7C15ull) * 0xBF58476D1CE4E5B9ull;
+    h ^= (bits(seed) + 0x94D049BB133111EBull) * 0xD6E8FEB86659FD93ull;
+    h ^= h >> 30;
+    h *= 0xBF58476D1CE4E5B9ull;
+    h ^= h >> 27;
+    h *= 0x94D049BB133111EBull;
+    h ^= h >> 31;
+    return double(h >> 11) * (1.0 / 9007199254740992.0);
+  }
+  // Smooth value noise in [0,1]: lattice hashes blended with a quintic
+  // fade, so noise(8*x, 8*y, seed) gives eight cells across a unit range.
+  static double value_noise(double x, double y, double seed) {
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(seed))
+      return std::numeric_limits<double>::quiet_NaN();
+    double fx = std::floor(x), fy = std::floor(y), tx = x - fx, ty = y - fy;
+    double u = tx * tx * tx * (tx * (tx * 6 - 15) + 10),
+           v = ty * ty * ty * (ty * (ty * 6 - 15) + 10);
+    double a = hash01(fx, fy, seed), b = hash01(fx + 1, fy, seed),
+           c = hash01(fx, fy + 1, seed), d = hash01(fx + 1, fy + 1, seed);
+    return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+  }
 
   std::string src_;
   std::vector<std::string> vars_;
@@ -256,6 +296,20 @@ private:
       return two([](double x, double y) { return x > y ? x : y; });
     if (f == "mod")
       return two(std::fmod);
+    auto three = [&](double (*fn)(double, double, double)) -> P {
+      if (a.size() != 3)
+        fail(f + " takes 3 arguments");
+      auto n = std::make_unique<Tern>();
+      n->f = fn;
+      n->a = std::move(a[0]);
+      n->b = std::move(a[1]);
+      n->c = std::move(a[2]);
+      return n;
+    };
+    if (f == "hash")
+      return three(hash01);
+    if (f == "noise")
+      return three(value_noise);
     fail("unknown function '" + f + "'");
   }
 };
