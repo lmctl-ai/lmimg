@@ -82,6 +82,19 @@ jobs:
           command -v pkg-config >/dev/null 2>&1 || { echo "no pkg-config implementation on PATH"; exit 1; }
           g++ --version | head -1
 
+      - name: POSIX build tools for ImageMagick Autoconf (windows)
+        if: runner.os == 'Windows' && env.ONLY_OK == 'true'
+        uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
+        with:
+          msystem: MINGW64
+          update: true
+          path-type: inherit
+          install: >-
+            make
+            pkgconf
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-binutils
+
       - name: lmscript compiler (npm @lmctl-ai/lmctl, DSL v5)
         if: env.ONLY_OK == 'true'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
