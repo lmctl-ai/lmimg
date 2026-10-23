@@ -1,0 +1,78 @@
+# Annotated processing pipeline (lmimg + lmdraw): each stage of a product
+# photo clean-up is rendered by lmimg as a thumbnail, lmdraw draws the
+# flow diagram (boxes, arrows, stage labels and the measured numbers) on a
+# transparent canvas, and lmimg composes both into one figure.
+out = ARGV.len() > 0 ? ARGV[0] : "pipeline_diagram.dslb";
+mkdir("images");
+mkdir("build/rendered");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# stage 0: a dim, slightly tilted, noisy shot of a mug
+let raw = img.pattern(200, 150, "0.22+0.08*y+0.05*hash(x,y,3)", "0.21+0.08*y+0.05*hash(x,y,3)", "0.24+0.08*y+0.05*hash(x,y,3)", "1");
+raw.rect(70.0, 45.0, 60.0, 70.0, 0.55, 0.30, 0.25, 1.0).circle(140.0, 80.0, 16.0, 0.55, 0.30, 0.25, 1.0).circle(140.0, 80.0, 9.0, 0.24, 0.22, 0.25, 1.0);
+raw.rect(70.0, 45.0, 60.0, 8.0, 0.72, 0.42, 0.36, 1.0);
+let s1 = raw.copy().rotate(6.0, 0.24, 0.22, 0.25, 1.0);
+s1.crop((s1.width() - 200) / 2, (s1.height() - 150) / 2, 200, 150);
+let s2 = s1.copy().morphology("median", 1);
+let s3 = s2.copy().levels(0.08, 1.5, 0.75);
+let s4 = s3.copy().unsharp(1.5, 1.0, 0.8, 0.0).vignette(120.0, 90.0);
+let mean0 = s1.mean(0);
+let mean3 = s3.mean(0);
+img.assert_true(mean3 > mean0 + 0.15);
+let noise1 = s1.copy().edges(1.0).mean(0);
+let noise2 = s2.copy().edges(1.0).mean(0);
+img.assert_true(noise2 < noise1);
+s1.save("build/stage1.png");
+s2.save("build/stage2.png");
+s3.save("build/stage3.png");
+s4.save("build/stage4.png");
+img.print("mean " + str(mean0) + " -> " + str(mean3) + ", edge noise " + str(noise1) + " -> " + str(noise2));
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 520, "#f8fafc");
+scene.text(450.0, 40.0, 22.0, "Product photo clean-up pipeline", "#0f172a").set_attr("text-anchor", "middle");
+scene.text(450.0, 64.0, 13.0, "each thumbnail is the real lmimg output of that stage; numbers are measured on the image", "#475569").set_attr("text-anchor", "middle");
+# four stage boxes with a slot for the thumbnail (200 x 150) and a caption
+for (i in range(0, 4)) {
+  let x = 30.0 + float(i) * 218.0;
+  scene.rect(x, 110.0, 206.0, 250.0, "#ffffff").set_attr("stroke", "#cbd5e1").set_attr("stroke-width", "1.5").set_attr("rx", "8");
+  scene.rect(x + 3.0, 113.0, 200.0, 150.0, "#e2e8f0");
+  if (i < 3) {
+    scene.arrow(x + 208.0, 190.0, x + 216.0, 190.0, "#2563eb", 2.5);
+  }
+}
+scene.text(133.0, 290.0, 15.0, "1. raw shot", "#0f172a").set_attr("text-anchor", "middle");
+scene.text(133.0, 312.0, 12.0, "tilted, dim, grainy", "#64748b").set_attr("text-anchor", "middle");
+scene.text(351.0, 290.0, 15.0, "2. median 3x3", "#0f172a").set_attr("text-anchor", "middle");
+scene.text(351.0, 312.0, 12.0, "grain removed, edges kept", "#64748b").set_attr("text-anchor", "middle");
+scene.text(569.0, 290.0, 15.0, "3. levels 8% / 1.5 / 75%", "#0f172a").set_attr("text-anchor", "middle");
+scene.text(569.0, 312.0, 12.0, "black point, gamma, white point", "#64748b").set_attr("text-anchor", "middle");
+scene.text(787.0, 290.0, 15.0, "4. unsharp + vignette", "#0f172a").set_attr("text-anchor", "middle");
+scene.text(787.0, 312.0, 12.0, "crisp subject, framed", "#64748b").set_attr("text-anchor", "middle");
+# measured results strip
+scene.rect(30.0, 390.0, 840.0, 96.0, "#eff6ff").set_attr("stroke", "#bfdbfe").set_attr("stroke-width", "1").set_attr("rx", "8");
+scene.text(50.0, 418.0, 14.0, "What the numbers say", "#1e3a8a");
+scene.text(50.0, 444.0, 12.5, "median: edge energy (grain) falls while the mug outline survives  |  levels: red mean rises by more than 0.15", "#1e40af");
+scene.text(50.0, 466.0, 12.5, "The same script asserts these on every run, so the figure cannot drift from the pipeline it documents.", "#1e40af");
+scene.render_png("build/rendered/pipeline_overlay.png", 900, 520, 1);
+end _dsl_
+savedsl(draw, "build/pipeline_overlay.dslb");
+r = system ${dsl_cli(draw)} --dsl build/pipeline_overlay.dslb;
+assert(r.code == 0);
+
+q = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let page = img.open("build/rendered/pipeline_overlay.png");
+img.assert_true(page.width() == 900 && page.height() == 520);
+page.blend(img.open("build/stage1.png"), "over", 1.0, 33, 113);
+page.blend(img.open("build/stage2.png"), "over", 1.0, 251, 113);
+page.blend(img.open("build/stage3.png"), "over", 1.0, 469, 113);
+page.blend(img.open("build/stage4.png"), "over", 1.0, 687, 113);
+page.save("images/pipeline_diagram.png");
+end _dsl_
+savedsl(q, "build/pipeline_page.dslb");
+r = system ${dsl_cli(q)} --dsl build/pipeline_page.dslb;
+assert(r.code == 0);
+print("images/pipeline_diagram.png");

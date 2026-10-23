@@ -11,3 +11,7 @@
 
 - Built-in selections are rectangular. Use a procedural image mask for other silhouettes; there is no free-form selection editor.
 - Image input must remain unchanged during `open`: header inspection and first-frame decoding are not an atomic snapshot. Dimensions are checked both before and after decoding, and the memory policy still applies.
+- `rotate` by non-right angles produces ImageMagick's shear-based extent (slightly larger than the bounding box). `perspective`/`lens` resample bilinearly; samples outside the source frame are transparent, and a single-coefficient `lens(-k)` only approximately inverts `lens(k)` (a few pixels of residual bow remain; see lens_undistort).
+- `heal` is a planar fit of the surrounding ring: it follows shading but does not synthesize texture.
+- `equalize` works on luma and scales RGB by the luma ratio; saturation is not preserved on strongly coloured input.
+- `blur` feathers alpha (premultiplied); `sharpen` and `edges` keep alpha untouched.

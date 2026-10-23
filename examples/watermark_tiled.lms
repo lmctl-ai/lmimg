@@ -1,0 +1,47 @@
+# Tiled diagonal watermark for a stock-image preview: the mark is rendered on
+# a transparent layer, rotated 30 degrees, tiled across the frame and blended
+# at low opacity. PSNR against the original measures how subtle it is.
+out = ARGV.len() > 0 ? ARGV[0] : "watermark_tiled.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# artwork: a dusk seascape with a lighthouse
+let art = img.pattern(420, 480, "0.95-0.75*y+0.05*noise(8*x,4*y,2)", "0.55-0.35*y+0.05*noise(8*x,4*y,2)", "0.35+0.25*y", "1");
+let sea = img.pattern(420, 170, "0.10+0.08*noise(20*x,6*y,5)+0.25*max(0,sign(0.04-abs(x-0.55-0.2*y)))*(1-y)", "0.18+0.10*noise(20*x,6*y,5)+0.18*max(0,sign(0.04-abs(x-0.55-0.2*y)))*(1-y)", "0.32+0.10*noise(20*x,6*y,5)", "1");
+art.blend(sea, "over", 1.0, 0, 310);
+art.rect(225.0, 170.0, 20.0, 145.0, 0.95, 0.95, 0.92, 1.0);
+art.rect(225.0, 200.0, 20.0, 18.0, 0.80, 0.15, 0.12, 1.0);
+art.rect(225.0, 250.0, 20.0, 18.0, 0.80, 0.15, 0.12, 1.0);
+art.rect(221.0, 160.0, 28.0, 10.0, 0.20, 0.20, 0.22, 1.0);
+art.circle(235.0, 158.0, 6.0, 1.0, 0.95, 0.6, 1.0);
+art.rect(0.0, 300.0, 420.0, 12.0, 0.15, 0.14, 0.16, 1.0);
+
+# watermark layer: a text grid on a larger transparent canvas, rotated, cropped
+let layer = img.canvas(760, 760, 0.0, 0.0, 0.0, 0.0);
+let mark = "(c) LATTICE STOCK  PREVIEW";
+let mw = img.text_width(mark, 22.0);
+for (row in range(0, 9)) {
+  for (col in range(0, 5)) {
+    let x = -120.0 + float(col) * (mw + 60.0) + float(row % 2) * (mw / 2.0);
+    layer.text(x, 40.0 + float(row) * 85.0, mark, 22.0, 1.0, 1.0, 1.0, 1.0);
+  }
+}
+layer.rotate(30.0, 0.0, 0.0, 0.0, 0.0);
+let rw = layer.width();
+let rh = layer.height();
+layer.crop((rw - 420) / 2, (rh - 480) / 2, 420, 480);
+let preview = art.copy().blend(layer, "over", 0.22, 0, 0);
+let psnr = preview.psnr(art);
+img.assert_true(psnr > 22.0 && psnr < 40.0);
+# the mark is translucent, not a wall: most pixels are unchanged
+let diff = preview.copy().blend(art, "difference", 1.0, 0, 0).threshold(0.02);
+img.assert_true(diff.mean(0) > 0.03 && diff.mean(0) < 0.4);
+
+art.text(18.0, 34.0, "ORIGINAL", 20.0, 1.0, 1.0, 1.0, 1.0);
+preview.text(18.0, 34.0, "WATERMARKED PREVIEW", 20.0, 1.0, 1.0, 1.0, 1.0);
+img.panel(art, preview, 20).save("images/watermark_tiled.png");
+img.print("watermark PSNR " + str(psnr) + " dB, marked pixel fraction " + str(diff.mean(0)));
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/watermark_tiled.png");

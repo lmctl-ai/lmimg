@@ -44,3 +44,11 @@ CI keeps the required global compiler at npm 0.2.369. That older lmctl CLI
 does not have `autorun`, so the public-caption integration check uses an
 isolated, separately pinned lmctl 0.2.401 via `LMIMG_AUTORUN_CLI`. The isolated
 package is not added to PATH and does not replace the compiler under test.
+
+0.1.2 adds native checks for threshold/invert/normalize/equalize/colormap/
+curves_rgb/hald/clut/divide/text_width, premultiplied alpha blur, hairline-free
+shapes, planar heal on a gradient, and deterministic hash/noise; a DSL program
+`tests/oracles.lms` with the same closed-form answers; and five more error
+paths (twenty in total). Thirty examples (two of them multi-host, which need
+lmplot and lmdraw on PATH only for `examples/render-all.sh`; `test.sh` runs
+the same scripts through the compiler, which installs the bound hosts).

@@ -10,3 +10,4 @@
 - [08 — Limitations](08-limitations.md)
 
 - [09 — v0.1.1 independent-review response](09-review-0.1.1.md)
+- [10 — v0.1.2 review, enhancement and QA pass](10-review-0.1.2.md)

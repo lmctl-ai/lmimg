@@ -1,0 +1,35 @@
+# Scanned-document cleanup: a page photographed under uneven light with sensor
+# grain becomes clean black-on-white text. Background is estimated with a
+# dilate (max filter), divided out, and the result is thresholded.
+out = ARGV.len() > 0 ? ARGV[0] : "document_scan_cleanup.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# paper: bright on the left, falling to about 45 % on the bottom right, with grain
+# grain is quantised to four levels so the figure stays small on disk
+let shade = "(0.50+0.46*(1-0.7*x)*(1-0.6*y))*(0.95+0.03*floor(4*hash(x,y,11)))";
+let page = img.pattern(420, 480, "0.97*" + shade, "0.95*" + shade, "0.90*" + shade, "1");
+let lines = "INVOICE 2026-0423\n\nQty  Item            Unit\n 12  Gasket, 40 mm   2.10\n  3  Bearing 6204    8.75\n  1  Shaft seal     14.20\n  5  Hex bolt M8     0.35\n\nSubtotal          73.65\nVAT 20 %          14.73\nTotal             88.38\n\nPayable within 30 days.\nThank you for your order.";
+page.text(28.0, 48.0, lines, 19.0, 0.08, 0.07, 0.09, 1.0);
+let corner_before = page.pixel(405, 465, 1);
+img.assert_true(corner_before < 0.75);
+
+let background = page.copy().morphology("dilate", 7);
+let clean = page.copy().blend(background, "divide", 1.0, 0, 0).threshold(0.62);
+img.assert_close(clean.pixel(405, 465, 1), 1.0, 0.000001);
+img.assert_close(clean.pixel(10, 10, 1), 1.0, 0.000001);
+# the ink survives: some black pixels remain along the first text line
+let ink = clean.copy().crop(28, 32, 200, 20);
+img.assert_true(ink.min(0) < 0.001 && ink.mean(0) > 0.5);
+
+page.text(250.0, 470.0, "PHONE SCAN", 20.0, 0.75, 0.15, 0.10, 1.0);
+clean.text(250.0, 470.0, "CLEANED", 20.0, 0.10, 0.45, 0.20, 1.0);
+# a hairline frame so the white page stays visible on the white sheet
+clean.rect(0.0, 0.0, 420.0, 1.0, 0.75, 0.75, 0.75, 1.0).rect(0.0, 479.0, 420.0, 1.0, 0.75, 0.75, 0.75, 1.0);
+clean.rect(0.0, 0.0, 1.0, 480.0, 0.75, 0.75, 0.75, 1.0).rect(419.0, 0.0, 1.0, 480.0, 0.75, 0.75, 0.75, 1.0);
+img.panel(page, clean, 20).save("images/document_scan_cleanup.png");
+img.print("corner brightness " + str(corner_before) + " -> " + str(clean.pixel(405, 465, 1)));
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/document_scan_cleanup.png");

@@ -54,18 +54,21 @@ def main() -> int:
                 raise SystemExit(f"missing or invalid fresh output: {fresh}")
             if fresh.stat().st_size > MAX_PNG:
                 raise SystemExit(f"fresh output exceeds PNG byte budget: {fresh}")
-    gif = gallery / "animation_wave.gif"
-    if not gif.is_file():
+    gifs = sorted(gallery.glob("*.gif"))
+    if not any(g.name == "animation_wave.gif" for g in gifs):
         raise SystemExit("missing animation_wave.gif")
-    if gif.stat().st_size > MAX_GIF:
-        raise SystemExit("animation_wave.gif exceeds 3 MiB")
-    width, height = gif_size(gif)
-    if width <= 0 or height <= 0:
-        raise SystemExit(f"{gif} has invalid dimensions ({width}x{height})")
-    if args.generated:
-        fresh = args.generated_dir / "animation_wave.gif"
-        if not fresh.is_file() or gif_size(fresh) != gif_size(gif) or fresh.stat().st_size > MAX_GIF:
-            raise SystemExit(f"missing or invalid fresh GIF: {fresh}")
+    for gif in gifs:
+        if gif.stem not in examples:
+            raise SystemExit(f"{gif} has no example producing it")
+        if gif.stat().st_size > MAX_GIF:
+            raise SystemExit(f"{gif} exceeds 3 MiB")
+        width, height = gif_size(gif)
+        if width <= 0 or height <= 0:
+            raise SystemExit(f"{gif} has invalid dimensions ({width}x{height})")
+        if args.generated:
+            fresh = args.generated_dir / gif.name
+            if not fresh.is_file() or gif_size(fresh) != gif_size(gif) or fresh.stat().st_size > MAX_GIF:
+                raise SystemExit(f"missing or invalid fresh GIF: {fresh}")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for name in examples:
         url = f"https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/{name}.lms"
@@ -75,13 +78,14 @@ def main() -> int:
         )
         if not caption.search(readme):
             raise SystemExit(f"README missing image with autorun caption for {name}")
-    gif_url = "https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms"
-    gif_caption = re.compile(
-        r"!\[[^\]]*\]\(docs/images/animation_wave\.gif\)(?:<br>|\s)*`" +
-        re.escape(f"lmctl autorun {gif_url}") + r"`"
-    )
-    if not gif_caption.search(readme):
-        raise SystemExit("README missing GIF autorun caption")
+    for gif in gifs:
+        gif_url = f"https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/{gif.stem}.lms"
+        gif_caption = re.compile(
+            r"!\[[^\]]*\]\(docs/images/" + re.escape(gif.name) + r"\)(?:<br>|\s)*`" +
+            re.escape(f"lmctl autorun {gif_url}") + r"`"
+        )
+        if not gif_caption.search(readme):
+            raise SystemExit(f"README missing GIF autorun caption for {gif.name}")
     if args.generated:
         for name, dimensions in [("batch_small", (180, 240)),
                                  ("batch_medium", (210, 280)),
@@ -89,7 +93,7 @@ def main() -> int:
             fresh = args.generated_dir / f"{name}.png"
             if not fresh.is_file() or png_size(fresh) != dimensions:
                 raise SystemExit(f"missing or distorted batch deliverable: {fresh}")
-        print(f"checked {len(examples)} PNG gallery figures, three batch files and animation_wave.gif")
+        print(f"checked {len(examples)} PNG gallery figures, three batch files and {len(gifs)} GIFs")
     return 0
 
 

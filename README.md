@@ -1,24 +1,51 @@
 # lmimg
 
-Image editing, compositing, and procedural graphics from scripts.
+Image editing, compositing and procedural graphics from scripts: a static ImageMagick core with original GIMP-style layers, masks, curves, healing and LUTs. Every picture below is produced by the one-line command under it, from an empty directory, with no photographs or extra files.
 
-| Image workflow | Image workflow |
+### Photo retouching and looks
+
+| | |
 | --- | --- |
-| ![Procedural gradient](docs/images/gradient_studio.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | ![Screen blend](docs/images/blend_modes.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
+| **Portrait retouch**: three blemishes healed with a shading-aware patch, exposure lifted, warmed, vignetted, sharpened.<br>![Portrait retouch](docs/images/portrait_retouch.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/portrait_retouch.lms` | **Exposure brackets and tone mapping**: one 8-bit frame clips the window; EV -2/0/+2 merged and tone-mapped keep both the view and the shadows.<br>![HDR tone map](docs/images/hdr_tone_map.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/hdr_tone_map.lms` |
+| **Tilt-shift miniature**: a focus band, saturation and a vignette turn an aerial view into a model (PSNR inside vs outside the band is asserted).<br>![Miniature](docs/images/miniature_tilt_shift.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/miniature_tilt_shift.lms` | **Layers and masks**: a gradient-masked ND layer, a multiply plate and a screen glow rendered with `img.layers`, the GIMP way.<br>![Graduated ND layers](docs/images/graduated_nd_layers.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/graduated_nd_layers.lms` |
+| **Colour grading LUT**: a teal-and-orange look baked into a Hald CLUT PNG and applied to two shots with `clut()`; checked against grading directly.<br>![Color grade LUT](docs/images/color_grade_lut.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/color_grade_lut.lms` | **Procedural photo grade**: a shaded still life with levels, white balance, vignette and unsharp mask.<br>![Procedural photo](docs/images/procedural_photo.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` |
+
+### Documents, labels and design
+
+| | |
+| --- | --- |
+| **Scan cleanup**: uneven light and grain removed by dilate-estimated background, `divide` blend and a threshold.<br>![Document cleanup](docs/images/document_scan_cleanup.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/document_scan_cleanup.lms` | **EAN-13 label**: the real L/G/R module tables and check digit, drawn then read back module by module.<br>![Barcode label](docs/images/barcode_label.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/barcode_label.lms` |
+| **Event poster**: centred type with `img.text_width`, a blurred-layer drop shadow, textured gradient and a date pill.<br>![Poster](docs/images/poster_text.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/poster_text.lms` | **Tiled watermark**: a rotated text layer tiled at low opacity over a stock preview; PSNR measures how subtle it is.<br>![Tiled watermark](docs/images/watermark_tiled.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_tiled.lms` |
+
+### Measurement, QA and calibration
+
+| | |
+| --- | --- |
+| **Visual regression heat map**: difference blend, normalised and false-coloured, with PSNR/SSIM on the figure.<br>![Diff heat map](docs/images/image_diff_heatmap.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/image_diff_heatmap.lms` | **Histogram equalisation, with the histograms** (lmimg + lmplot): 256-bin CSV exports plotted under the before/after frames.<br>![Histogram equalize](docs/images/histogram_equalize_plot.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/histogram_equalize_plot.lms` |
+| **Annotated pipeline** (lmimg + lmdraw): every stage thumbnail is real output; the diagram's claims are asserted by the script.<br>![Pipeline diagram](docs/images/pipeline_diagram.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/pipeline_diagram.lms` | **Salt-and-pepper denoise**: a 3x3 median beats a Gaussian blur by 5 dB on a corrupted drawing.<br>![Denoise](docs/images/salt_pepper_denoise.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/salt_pepper_denoise.lms` |
+| **Keystone correction**: the inverse homography derived in-script from four corners rectifies a whiteboard photo; grid straightness is measured.<br>![Perspective whiteboard](docs/images/perspective_whiteboard.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/perspective_whiteboard.lms` | **Lens calibration**: barrel distortion bows a grid line by 36 px; a swept inverse coefficient leaves 5 px.<br>![Lens undistort](docs/images/lens_undistort.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/lens_undistort.lms` |
+
+### Production: sheets, sprites, batches
+
+| | |
+| --- | --- |
+| **Contact sheet** for a shoot: six exposures/white balances, centred captions.<br>![Contact sheet](docs/images/contact_sheet_shoot.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_shoot.lms` | **Sprite atlas and GIF**: squash-and-stretch frames with a blurred contact shadow packed into fixed cells.<br>![Sprite sheet](docs/images/sprite_sheet.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sprite_sheet.lms` |
+| **Batch resize**: three aspect-preserving deliverables plus a labelled sheet.<br>![Batch resize](docs/images/batch_resize.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` | **Catalogue variants**: four colourways on one sheet.<br>![Four-up contact sheet](docs/images/contact_sheet_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` |
+| ![Bouncing ball sprite GIF](docs/images/sprite_sheet.gif)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sprite_sheet.lms` | ![Animated color wave](docs/images/animation_wave.gif)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
+
+### Basics
+
+| | |
+| --- | --- |
+| ![Levels](docs/images/gradient_studio.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | ![Screen blend](docs/images/blend_modes.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
 | ![Recovered contrast](docs/images/levels_lab.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` | ![Sepia print](docs/images/sepia_poster.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` |
 | ![Blurred geometry](docs/images/blur_reveal.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` | ![Edge map](docs/images/edge_map.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
 | ![Procedural thumbnails](docs/images/thumbnail_grid.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` | ![Moving color wave](docs/images/animation_wave.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
-| ![Procedural photo style pipeline](docs/images/procedural_photo.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` | ![Watermarked procedural artwork](docs/images/watermark_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` |
-| ![Batch resize outputs](docs/images/batch_resize.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` | ![Before and after panels](docs/images/before_after_panels.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
-| ![Four-up contact sheet](docs/images/contact_sheet_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` | ![Animated color wave](docs/images/animation_wave.gif)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
+| ![Watermarked procedural artwork](docs/images/watermark_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` | ![Before and after panels](docs/images/before_after_panels.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
 
-Install an autorun-capable [lmctl](https://github.com/lmctl-ai/lmctl) (verified with 0.2.401), then copy any caption above into a terminal. Each script installs its bound host as needed and writes `images/<example>.png` in the current directory. Inputs are generated in the script; no photographs or additional files are required.
+## Quickstart
 
-```sh
-lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms
-```
-
-The [v0.1.1 release](https://github.com/lmctl-ai/lmimg/releases/tag/v0.1.1) provides static binaries for Linux x64/arm64, macOS arm64/x64, and Windows x64. macOS uses system libraries. No ImageMagick installation, font directory, or codec DLL is needed.
+Install an autorun-capable [lmctl](https://github.com/lmctl-ai/lmctl) (0.2.401 or newer), then paste any caption above into a terminal. The script installs the latest lmimg [release](https://github.com/lmctl-ai/lmimg/releases) (static binaries for Linux x64/arm64, macOS arm64/x64, Windows x64; no ImageMagick, fonts or codec DLLs needed), runs itself, checks its own numbers and writes `images/<example>.png` in the current directory. Examples that combine hosts install lmplot or lmdraw the same way.
 
 ```lms
 p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
@@ -33,72 +60,81 @@ r = system ${dsl_cli(p)} --dsl comparison.dslb;
 assert(r.code == 0);
 ```
 
-All image edits mutate their receiver and return it for chaining. Use `copy()` before editing when the original must remain available. Dimensions and coordinates use pixels; RGBA channels are normalized to `[0,1]`. Storage is 8 bits per channel, so fractional colors are rounded to the nearest representable byte. Expressions in `pattern` use normalized `x` and `y` coordinates and the arithmetic/functions documented in [the expression note](durable-memory/03-schema-and-numerics.md).
+All image edits mutate their receiver and return it for chaining; use `copy()` first when the original must survive. Dimensions and coordinates are pixels; RGBA channels are normalized to `[0,1]` and stored as 8 bits per channel. `pattern` expressions use normalized `x`, `y`, the arithmetic and functions in [the expression note](durable-memory/03-schema-and-numerics.md), plus `hash(x,y,seed)` (white noise) and `noise(x,y,seed)` (smooth value noise) for procedural textures.
+
+## API
 
 | Task | API |
 | --- | --- |
-| Create / load | `img.canvas(w,h,r,g,b,a)`, `img.pattern(w,h,R,G,B,A)`, `img.open(path)` |
+| Create / load | `img.canvas(w,h,r,g,b,a)`, `img.pattern(w,h,R,G,B,A)`, `img.open(path)`, `img.hald(level)` |
 | Copy / save | `image.copy()`, `image.save(path)` |
 | Inspect / edit pixels | `width()`, `height()`, `pixel(x,y,channel)`, `set_pixel(x,y,r,g,b,a)` |
-| Geometry | `resize`, `crop`, `rotate`, `flip`, `perspective`, `lens` |
-| Color | `levels`, `curves`, `hsl`, `channelmix`, `grayscale`, `sepia` |
-| Filters | `blur`, `sharpen`, `edges`, `morphology`, `unsharp`, `vignette`, `tilt_shift` |
-| Compositing | `blend`, `mask`, rectangular `selection`, layers with per-layer opacity |
-| Repair / builders | `heal`, `img.curve().point(x,y)`, `img.layers(w,h)`, `img.montage()` |
-| Drawing | `rect`, `circle`, `line`, `text` with an embedded font |
-| Measurements | `pixel`, `mean`, `stddev`, `min`, `max`, `histogram`, `psnr`, `ssim` |
-| Contact sheets / GIF | `img.panel(a,b,gap)`, `img.animation().add(frame,delay).save(path)` |
-| Utilities | `img.eval(expression)`, `img.assert_true`, `img.assert_close`, `metadata(key,value)`, `property(key)` |
+| Geometry | `resize`, `crop`, `rotate`, `flip`, `perspective`, `lens` (bilinear resampling) |
+| Tone and colour | `levels`, `curves`, `curves_rgb(r,g,b)`, `hsl`, `channelmix`, `grayscale`, `sepia`, `invert`, `threshold`, `normalize`, `equalize`, `colormap(name)`, `clut(hald)` |
+| Filters | `blur` (feathers alpha, premultiplied), `sharpen`, `edges`, `morphology`, `unsharp`, `vignette`, `tilt_shift` |
+| Compositing | `blend(image,mode,opacity,x,y)`, `mask`, rectangular `selection`, `img.layers(w,h)` with `Layers.add(image,mode,opacity,x,y)`, `Layers.masked(image,mask,mode,opacity,x,y)`, `Layers.render()` |
+| Repair / builders | `heal` (planar fit of the surrounding ring), `img.curve().point(x,y)`, `img.montage()` with `Montage.add(image)`, `Montage.render(columns,gap,r,g,b,a)` |
+| Drawing | `rect`, `circle`, `line`, `text` with the embedded font, `img.text_width(text,size)` |
+| Measurements | `mean`, `stddev`, `min`, `max`, `histogram(csv)`, `psnr`, `ssim`, `property(key)`, `metadata(key,value)` |
+| Sheets / GIF | `img.panel(a,b,gap)`, `img.animation()` with `Animation.add(frame,delay)`, `Animation.size()`, `Animation.save(path)` |
+| Utilities | `img.eval(expression)`, `img.assert_true`, `img.assert_close`, `img.print(value)` |
 
-Selections are rectangular: `selection(x,y,w,h)` clears alpha outside that rectangle.
-For other shapes, build an image mask and apply `mask`. Blend and layer modes are
-`over`, `multiply`, `screen`, `overlay`, `difference`, `darken`, `lighten`,
-`addition` (clipped sum), and `subtract` (clipped backdrop minus source).
-Morphology radii are 0–16.
+Blend and layer modes: `over`, `multiply`, `screen`, `overlay`, `difference`, `darken`, `lighten`, `addition`, `subtract`, `divide` (straight-alpha source-over, opacity applied to the source alpha). Colormaps: `gray`, `heat`, `viridis`, `coolwarm`. Selections are rectangular: `selection(x,y,w,h)` clears alpha outside; use an image mask for other shapes. Morphology radii are 0–16. `img.hald(level)` builds an identity Hald CLUT of side `level^3` (2–16); grade it with any colour operation, save it, and `clut()` applies it with trilinear interpolation. `curves_rgb`, `threshold`, `invert`, `normalize`, `equalize`, `colormap`, `clut`, `hald`, `text_width`, the `divide` mode and the `hash`/`noise` expression functions are new in 0.1.2.
 
-Builder chains include `img.curve().point(x,y)`, `img.layers(w,h).add(...)`,
-`Layers.masked(...)` and `Layers.render()`, `img.montage().add(...)` and
-`Montage.render(columns,gap)`, and `img.animation().add(...)`, `Animation.size()`
-and `Animation.save(path)`. `img.print(value)` writes a diagnostic result.
-Use the signatures query for the exact typed arguments to each builder.
+`lmimg --dsl-signatures` lists exact parameter types; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM (PPM/PGM/PBM) are the supported local raster formats. Animated output is GIF with centisecond delays; `open` reads the first frame of an animated input. Text is ASCII in the embedded Roboto font. Comparison needs equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM is one global luma window with sample covariance and constants 0.01² and 0.03², a compact statistic rather than a multiscale perceptual model.
 
-`lmimg --dsl-signatures` lists exact parameter types and overloads; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM (PPM/PGM/PBM) are supported local raster formats. Animated output is GIF; delays are centiseconds. `open` reads the first frame of an animated input. Text supports ASCII through the embedded Roboto font. Comparison requires equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM uses one global luma window with sample covariance and constants 0.01² and 0.03²; it is a compact image statistic rather than a multiscale perceptual model.
-
-### Examples
+## Examples
 
 | Story | Run from any empty directory |
 | --- | --- |
-| Procedural color studio | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` |
+| Portrait retouch with shading-aware healing | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/portrait_retouch.lms` |
+| Exposure brackets merged and tone-mapped | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/hdr_tone_map.lms` |
+| Tilt-shift miniature of an aerial view | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/miniature_tilt_shift.lms` |
+| Graduated ND, multiply and screen layers | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/graduated_nd_layers.lms` |
+| Teal-and-orange look as a Hald CLUT | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/color_grade_lut.lms` |
+| Procedural photo-style grade | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` |
+| Scanned invoice cleaned to black on white | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/document_scan_cleanup.lms` |
+| EAN-13 product label, verified by reading it back | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/barcode_label.lms` |
+| Event poster with centred type and drop shadows | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/poster_text.lms` |
+| Tiled diagonal watermark with PSNR | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_tiled.lms` |
+| Visual regression heat map with PSNR/SSIM | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/image_diff_heatmap.lms` |
+| Histogram equalisation plotted with lmplot | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/histogram_equalize_plot.lms` |
+| Annotated clean-up pipeline drawn with lmdraw | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/pipeline_diagram.lms` |
+| Median versus Gaussian on salt-and-pepper noise | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/salt_pepper_denoise.lms` |
+| Keystone correction of a whiteboard photo | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/perspective_whiteboard.lms` |
+| Lens distortion calibrated by sweep | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/lens_undistort.lms` |
+| Contact sheet of a product shoot | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_shoot.lms` |
+| Sprite atlas and GIF with squash and stretch | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sprite_sheet.lms` |
+| Batch resizing three deliverables | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` |
+| Four-up catalogue sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` |
+| Before and after delivery panels | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
+| Watermarking an original study | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` |
+| Procedural colour studio (levels) | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` |
 | Screen compositing | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
 | Recovering tonal contrast | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` |
 | A warm print treatment | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` |
 | Softening geometric boundaries | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` |
 | Finding boundaries | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
-| A contact sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` |
-| A moving color wave | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
-| A procedural photo-style grade | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` |
-| Watermarking an original study | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` |
-| Batch resizing three deliverables | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` |
-| Before and after delivery panels | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
-| A four-up contact sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` |
+| A procedural contact sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` |
+| A moving colour wave (GIF) | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
 
-![A procedural color wave](docs/images/animation_wave.gif)
+Regenerate the committed gallery with `examples/render-all.sh` (lmplot and lmdraw on `PATH` for the two combo figures). Every example compiles and executes itself, asserts its results, and prints its output path.
 
-`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms`
+## Limits worth knowing
 
-Regenerate the committed gallery with `examples/render-all.sh`. Every example compiles and executes itself, checks its results, and prints its output path.
+- 8 bits per channel, no colour management; operations work on gamma-encoded sRGB values (so `grayscale` is Rec.709 luma of the encoded values).
+- `rotate` by non-right angles yields ImageMagick's shear-based extent, slightly larger than the bounding box; `perspective` and `lens` resample bilinearly and leave out-of-frame samples transparent.
+- `heal` fits a plane to the ring around the patch: good for skin and gradients, not a texture synthesizer. Selections are rectangles; build masks for other shapes.
+- `blur` feathers alpha (premultiplied); `sharpen` and `edges` act on RGB and keep alpha.
+- Text is ASCII only. SSIM is a single global window.
 
-### Relationship to GIMP
+## Relationship to GIMP
 
-lmimg is a scripting host with a small, original MIT implementation of editing ideas such as layers, masks, curves, selections, healing-lite, perspective/lens transforms, and selective-focus filters. It does not link GIMP or GEGL and does not use their source. Healing-lite performs a local patch correction; it is not a content-aware reconstruction engine. This project has no GUI and does not implement GIMP's project format or plug-in ecosystem.
+lmimg is a scripting host with a small, original MIT implementation of editing ideas such as layers, masks, curves, selections, healing-lite, LUTs, perspective/lens transforms and selective-focus filters. It does not link GIMP or GEGL and does not use their source. ImageMagick supplies the static raster and codec engine. Its license and the permissive licenses for the pinned codecs (zlib, libpng, libjpeg-turbo, libtiff, libwebp), stb_truetype and the embedded Roboto font are included in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES), also printed by `lmimg --notices`. The build refuses any other ImageMagick delegate (pango, graphviz, lcms, freetype and the rest are configured off and asserted absent), so no GPL or LGPL image library is linked.
 
-ImageMagick supplies the static raster and codec engine. Its license and the permissive licenses for the pinned codecs and embedded font are included in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES), also available verbatim through `lmimg --notices`.
+## Resource limits and command surface
 
-### Resource limits
-
-The default total memory budget is **4096 MiB**. Set `LMIMG_MAX_MEMORY_MB` to a positive whole number of MiB to change it. Invalid values exit 2. The host counts C++ allocations and conservatively charges native image storage, checking known temporary peaks before allocation. Exceeding the budget exits 3 with a JSON error on stdout and one stderr line naming `LMIMG_MAX_MEMORY_MB`. Image caches cannot spill to disk. Large images and retained copies share the same budget.
-
-The scripting-only command surface is:
+The default total memory budget is **4096 MiB**; set `LMIMG_MAX_MEMORY_MB` to a positive whole number of MiB to change it (invalid values exit 2). The host counts C++ allocations and conservatively charges native image storage, checking known temporary peaks before allocation. Exceeding the budget exits 3 with a JSON error on stdout and one stderr line naming `LMIMG_MAX_MEMORY_MB`.
 
 ```text
 lmimg --dsl FILE [FILE ...] [--dry-run]
@@ -110,7 +146,7 @@ lmimg --dsl-signatures
 
 Usage errors exit 2; bytecode-load and execution failures exit 3 with JSON on stdout and a diagnostic on stderr. A dry run verifies bytecode without running image operations.
 
-### Build and verification
+## Build and verification
 
 ```sh
 scripts/sync-deps.sh
@@ -118,4 +154,4 @@ scripts/sync-sdk.sh --verify
 ./test.sh
 ```
 
-CMake builds pinned source dependencies into one executable. `test.sh` checks native pixel/codec/math oracles, DSL/compiler signatures, examples, byte-identical reruns, errors, notices, static linkage, and memory-limit failures. CI runs the same suite on all five release platforms. See [durable-memory](durable-memory/index.md) for pins, implementation decisions, measured results, and release evidence.
+CMake builds the pinned source dependencies into one executable. `test.sh` checks native pixel/codec/math oracles, DSL/compiler signatures, every example, byte-identical reruns, error paths, notices, static linkage and memory-limit failures; CI runs the same suite on all five release platforms. See [durable-memory](durable-memory/index.md) for pins, implementation decisions, measured results and release evidence.

@@ -1,0 +1,58 @@
+# Colour grading with a LUT: a teal-and-orange look is designed once (curves
+# per channel, hue and saturation), baked into a Hald CLUT image, saved as a
+# PNG, and then applied to two different shots with a single clut() call.
+# The LUT result is checked against grading the shot directly.
+out = ARGV.len() > 0 ? ARGV[0] : "color_grade_lut.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# the look: lift blues in the shadows, push warmth into highlights, add contrast
+let red = img.curve().point(0.0, 0.0).point(0.25, 0.20).point(0.6, 0.68).point(1.0, 1.0);
+let green = img.curve().point(0.0, 0.02).point(0.5, 0.50).point(1.0, 0.96);
+let blue = img.curve().point(0.0, 0.10).point(0.4, 0.42).point(0.75, 0.68).point(1.0, 0.88);
+fn grade(im: Image, r: Curve, g: Curve, b: Curve) -> Image {
+  return im.curves_rgb(r, g, b).hsl(-4.0, 1.25, 1.0);
+}
+let lut = grade(img.hald(8), red, green, blue);
+lut.save("images/teal_orange_hald.png");
+let reloaded = img.open("images/teal_orange_hald.png");
+img.assert_true(reloaded.width() == 512);
+
+# shot 1: a street at dusk; shot 2: a desert road at noon
+let street = img.pattern(420, 230, "0.25+0.35*y+0.05*noise(14*x,8*y,3)", "0.28+0.30*y+0.05*noise(14*x,8*y,3)", "0.40+0.25*y", "1");
+street.rect(0.0, 150.0, 420.0, 80.0, 0.30, 0.29, 0.30, 1.0);
+street.rect(30.0, 40.0, 70.0, 110.0, 0.42, 0.36, 0.33, 1.0).rect(120.0, 20.0, 90.0, 130.0, 0.38, 0.35, 0.36, 1.0).rect(300.0, 55.0, 95.0, 95.0, 0.45, 0.40, 0.34, 1.0);
+for (i in range(0, 9)) {
+  street.rect(42.0 + float(i % 3) * 20.0, 55.0 + float(i / 3) * 28.0, 10.0, 14.0, 0.95, 0.80, 0.45, 1.0);
+}
+street.circle(258.0, 95.0, 9.0, 1.0, 0.9, 0.6, 1.0).rect(255.0, 95.0, 6.0, 55.0, 0.2, 0.2, 0.22, 1.0);
+let desert = img.pattern(420, 230, "0.55+0.35*(1-y)+0.05*noise(10*x,10*y,8)", "0.50+0.30*(1-y)+0.05*noise(10*x,10*y,8)", "0.38+0.45*(1-y)", "1");
+desert.rect(0.0, 120.0, 420.0, 110.0, 0.80, 0.68, 0.45, 1.0);
+let road = img.pattern(420, 110, "0.32", "0.31", "0.33", "max(0,sign(0.08+0.42*y-abs(x-0.5)))");
+desert.blend(road, "over", 1.0, 0, 120);
+desert.rect(206.0, 150.0, 8.0, 80.0, 0.95, 0.9, 0.5, 1.0);
+
+let street_lut = street.copy().clut(reloaded);
+let desert_lut = desert.copy().clut(reloaded);
+let street_direct = grade(street.copy(), red, green, blue);
+img.assert_true(street_lut.psnr(street_direct) > 40.0);
+# the look does what it says: shadows get bluer, highlights warmer
+let shadow_before = street.copy().crop(0, 150, 420, 80);
+let shadow_after = street_lut.copy().crop(0, 150, 420, 80);
+img.assert_true(shadow_after.mean(2) - shadow_after.mean(0) > shadow_before.mean(2) - shadow_before.mean(0));
+
+let left = img.montage().add(street).add(desert).render(1, 20, 1.0, 1.0, 1.0, 1.0);
+let right = img.montage().add(street_lut).add(desert_lut).render(1, 20, 1.0, 1.0, 1.0, 1.0);
+left.text(30.0, 44.0, "ORIGINAL SHOTS", 18.0, 1.0, 1.0, 1.0, 1.0);
+right.text(30.0, 44.0, "TEAL & ORANGE LUT (clut)", 18.0, 1.0, 1.0, 1.0, 1.0);
+let thumb = reloaded.copy().resize(90, 90);
+right.blend(thumb, "over", 1.0, 350, 400);
+right.text(348.0, 396.0, "Hald 8", 12.0, 0.1, 0.1, 0.1, 1.0);
+let im = img.panel(left, right, 10);
+im.resize(900, 520);
+im.save("images/color_grade_lut.png");
+img.print("LUT vs direct grade PSNR " + str(street_lut.psnr(street_direct)) + " dB");
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/color_grade_lut.png");

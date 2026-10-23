@@ -1,0 +1,71 @@
+# Exposure bracketing and tone mapping: a room with a bright window has more
+# dynamic range than one 8-bit exposure. Three brackets (EV -2, 0, +2) of the
+# same linear scene are merged and tone-mapped so both the view through the
+# window and the shadowed furniture keep detail.
+out = ARGV.len() > 0 ? ARGV[0] : "hdr_tone_map.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# Draw the scene at a given exposure gain. Colors are linear radiance * gain and
+# clip at 1.0 exactly like a sensor: the sky (radiance 3.2) clips at EV 0.
+fn shot(gain: float) -> Image {
+  let g = str(gain);
+  # wall with a soft gradient and plaster texture, radiance ~0.09..0.14
+  let im = img.pattern(420, 480, "(0.10+0.05*(1-y)+0.02*noise(30*x,30*y,3))*" + g,
+                                  "(0.09+0.045*(1-y)+0.02*noise(30*x,30*y,3))*" + g,
+                                  "(0.08+0.04*(1-y)+0.02*noise(30*x,30*y,3))*" + g, "1");
+  # floor, skirting, a sideboard with drawers and a framed picture
+  im.rect(0.0, 360.0, 420.0, 120.0, 0.07 * gain, 0.05 * gain, 0.035 * gain, 1.0);
+  im.rect(0.0, 352.0, 420.0, 8.0, 0.16 * gain, 0.15 * gain, 0.14 * gain, 1.0);
+  im.rect(40.0, 270.0, 170.0, 92.0, 0.085 * gain, 0.06 * gain, 0.04 * gain, 1.0);
+  im.rect(52.0, 282.0, 66.0, 30.0, 0.11 * gain, 0.08 * gain, 0.055 * gain, 1.0);
+  im.rect(130.0, 282.0, 66.0, 30.0, 0.11 * gain, 0.08 * gain, 0.055 * gain, 1.0);
+  im.rect(52.0, 320.0, 144.0, 30.0, 0.11 * gain, 0.08 * gain, 0.055 * gain, 1.0);
+  im.rect(60.0, 110.0, 110.0, 80.0, 0.20 * gain, 0.17 * gain, 0.13 * gain, 1.0);
+  im.rect(68.0, 118.0, 94.0, 64.0, 0.06 * gain, 0.11 * gain, 0.14 * gain, 1.0);
+  # window: sky (3.2) with distant hills (1.3) and a sunlit sill (0.9)
+  let sky = img.pattern(170, 230, "min(1,(1.9+0.9*y)*" + g + ")", "min(1,(2.4+0.6*y)*" + g + ")", "min(1,3.2*" + g + ")", "1");
+  let hills = img.pattern(170, 230, "0.55*" + g, "0.8*" + g, "0.45*" + g,
+    "max(0,sign(y-0.62-0.12*sin(6*x)-0.05*sin(17*x)))");
+  sky.blend(hills, "over", 1.0, 0, 0);
+  im.blend(sky, "over", 1.0, 225, 60);
+  im.rect(214.0, 49.0, 192.0, 11.0, 0.9 * gain, 0.85 * gain, 0.75 * gain, 1.0);
+  im.rect(214.0, 290.0, 192.0, 16.0, 0.9 * gain, 0.85 * gain, 0.75 * gain, 1.0);
+  im.rect(214.0, 49.0, 11.0, 257.0, 0.9 * gain, 0.85 * gain, 0.75 * gain, 1.0);
+  im.rect(395.0, 49.0, 11.0, 257.0, 0.9 * gain, 0.85 * gain, 0.75 * gain, 1.0);
+  im.rect(306.0, 60.0, 8.0, 230.0, 0.9 * gain, 0.85 * gain, 0.75 * gain, 1.0);
+  im.rect(225.0, 172.0, 170.0, 8.0, 0.9 * gain, 0.85 * gain, 0.75 * gain, 1.0);
+  return im;
+}
+let ev_minus = shot(0.25);
+let ev_zero = shot(1.0);
+let ev_plus = shot(4.0);
+# at EV 0 the sky is clipped flat and the sideboard is nearly black
+let sky0 = ev_zero.copy().crop(230, 65, 70, 90);
+let board0 = ev_zero.copy().crop(45, 275, 160, 80);
+img.assert_true(sky0.stddev(0) < 0.001 && sky0.min(0) > 0.999 && board0.mean(0) < 0.12);
+
+# merge the brackets (equal weights) and compress the range with a shadow-lifting
+# curve plus mild local contrast
+let merged = ev_minus.copy().blend(ev_zero, "over", 0.5, 0, 0).blend(ev_plus, "over", 0.333333, 0, 0);
+let tone = img.curve().point(0.0, 0.0).point(0.12, 0.30).point(0.35, 0.62).point(0.7, 0.86).point(1.0, 1.0);
+let mapped = merged.copy().curves(tone).unsharp(18.0, 9.0, 0.35, 0.0).hsl(0.0, 1.1, 1.0);
+let sky1 = mapped.copy().crop(230, 65, 70, 90);
+let board1 = mapped.copy().crop(45, 275, 160, 80);
+# the sky is no longer clipped (it keeps its gradient) and the sideboard is readable
+img.print("sky red: clipped max " + str(sky0.max(0)) + " -> max " + str(sky1.max(0)) + " stddev " + str(sky1.stddev(0)) + "; sideboard mean " + str(board0.mean(0)) + " -> " + str(board1.mean(0)));
+img.assert_true(sky1.max(0) < 0.98 && sky1.stddev(0) > 0.004 && board1.mean(0) > 0.3);
+
+# left panel: the EV 0 shot with the two other brackets inset
+ev_minus.resize(120, 137);
+ev_plus.resize(120, 137);
+ev_zero.blend(ev_minus, "over", 1.0, 20, 323).blend(ev_plus, "over", 1.0, 150, 323);
+ev_zero.text(26.0, 346.0, "EV -2", 16.0, 1.0, 1.0, 1.0, 1.0);
+ev_zero.text(156.0, 346.0, "EV +2", 16.0, 0.1, 0.1, 0.1, 1.0);
+ev_zero.text(18.0, 34.0, "SINGLE EXPOSURE EV 0", 20.0, 1.0, 1.0, 1.0, 1.0);
+mapped.text(18.0, 34.0, "3 BRACKETS MERGED + TONE MAPPED", 20.0, 1.0, 1.0, 1.0, 1.0);
+img.panel(ev_zero, mapped, 20).save("images/hdr_tone_map.png");
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/hdr_tone_map.png");

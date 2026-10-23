@@ -31,3 +31,14 @@ Five additional self-contained examples bring the gallery to 13 PNGs plus GIF:
 Every README image has a raw-URL `lmctl autorun` caption. `test.sh` additionally
 uses `LMIMG_TEST_NETWORK=1` to verify a public caption from an empty directory
 with the build host removed from PATH; CI enables this integration check.
+
+## v0.1.2 user stories
+
+Seventeen further examples (30 PNG + 2 GIF): see
+[10-review-0.1.2.md](10-review-0.1.2.md) for the list and the authoring
+lessons (no closures over outer locals in block functions, data exchange
+between hosts through files, lmdraw overlays composed by lmimg). The README
+gallery is grouped by theme (retouching and looks; documents, labels and
+design; measurement, QA and calibration; production; basics). The gallery
+checker now validates every `docs/images/*.gif` against an example and a
+README caption, not only `animation_wave.gif`.

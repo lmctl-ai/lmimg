@@ -25,3 +25,12 @@ image-library closure. No GIMP/GEGL or copyleft image delegate is used.
 Pins must be commit objects rather than annotated-tag objects: the original
 codec tag SHAs checked out to different peeled HEAD commits and failed CI.
 `sync-deps.sh` now checks object type, HEAD and clean source state.
+
+Since 0.1.2 configure also passes `--without-pango --without-gvc --without-zip
+--without-dmr --without-autotrace --without-dps --without-flif --without-fpx
+--without-rsvg --without-uhdr` (these were auto-detected before and pango is
+LGPL), and CMake fails if `config.h` defines any `*_DELEGATE` other than
+PNG, JPEG, TIFF, WEBP, WEBPMUX and ZLIB. An `nm` audit of the static archives
+found no freetype, lcms, fontconfig, lzma, zstd, jbig, openjp2, bzip2,
+ghostscript, libxml, fftw or OpenMP symbols; libtiff is built with jbig, lerc,
+lzma, zstd and libdeflate off.

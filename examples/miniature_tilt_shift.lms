@@ -1,0 +1,63 @@
+# Miniature-faking: an aerial city view gets a tilt-shift focus band, boosted
+# saturation and a vignette, the classic recipe that makes real streets look
+# like a model railway. The city is procedural: hashed building blocks with
+# sunlit roofs and cast shadows, parks, and cars on the streets.
+out = ARGV.len() > 0 ? ARGV[0] : "miniature_tilt_shift.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+fn h01(i: int, j: int, seed: int) -> float {
+  return img.eval("hash(" + str(i) + "," + str(j) + "," + str(seed) + ")");
+}
+let aerial = img.pattern(420, 480, "0.30+0.03*noise(50*x,50*y,1)", "0.30+0.03*noise(50*x,50*y,1)", "0.33+0.03*noise(50*x,50*y,1)", "1");
+let cell = 34.0;
+for (j in range(0, 15)) {
+  for (i in range(0, 13)) {
+    let x0 = 6.0 + float(i) * cell;
+    let y0 = 6.0 + float(j) * cell;
+    let kind = h01(i, j, 11);
+    if (kind < 0.14) {
+      # park: green with a tree ring
+      aerial.rect(x0, y0, 26.0, 26.0, 0.30, 0.55, 0.22, 1.0);
+      aerial.circle(x0 + 13.0, y0 + 13.0, 7.0, 0.18, 0.42, 0.15, 1.0);
+    } else {
+      let hgt = 4.0 + 10.0 * h01(i, j, 5);
+      let r = 0.45 + 0.45 * h01(i, j, 2);
+      let g = 0.40 + 0.35 * h01(i, j, 3);
+      let b = 0.38 + 0.30 * h01(i, j, 4);
+      # cast shadow toward lower-right, then the building body, then the sunlit roof edge
+      aerial.rect(x0 + 2.0 + hgt * 0.4, y0 + 2.0 + hgt * 0.4, 26.0, 26.0, 0.12, 0.12, 0.16, 1.0);
+      aerial.rect(x0, y0, 26.0, 26.0, r * 0.72, g * 0.72, b * 0.72, 1.0);
+      aerial.rect(x0, y0, 26.0, 3.0, r, g, b, 1.0);
+      aerial.rect(x0, y0, 3.0, 26.0, r, g, b, 1.0);
+      aerial.rect(x0 + 6.0, y0 + 6.0, 14.0, 14.0, r * 0.86, g * 0.86, b * 0.86, 1.0);
+    }
+  }
+}
+# cars: small bright rectangles on the horizontal streets
+for (i in range(0, 70)) {
+  let lane = i % 14;
+  let cx = 8.0 + 404.0 * h01(i, 99, 7);
+  let cy = 2.0 + float(lane) * cell + 30.0 * float(i % 2) + 1.0;
+  aerial.rect(cx, cy, 5.0, 3.0, 0.95, 0.9 - 0.6 * float(i % 3) * 0.5, 0.25 + 0.6 * float(i % 2), 1.0);
+}
+let mini = aerial.copy().tilt_shift(7.0, 0.42, 0.60).hsl(0.0, 1.55, 1.02).levels(0.02, 1.0, 0.98).vignette(300.0, 260.0);
+# outside the focus band the picture loses far more detail than inside it
+let top_before = aerial.copy().crop(40, 30, 340, 90);
+let top_after = mini.copy().crop(40, 30, 340, 90);
+let band_before = aerial.copy().crop(40, 215, 340, 60);
+let band_after = mini.copy().crop(40, 215, 340, 60);
+let psnr_top = top_after.psnr(top_before);
+let psnr_band = band_after.psnr(band_before);
+img.assert_true(psnr_band > psnr_top + 3.0);
+
+aerial.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.45);
+mini.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.45);
+aerial.text(18.0, 34.0, "AERIAL SHOT", 20.0, 1.0, 1.0, 1.0, 1.0);
+mini.text(18.0, 34.0, "TILT-SHIFT MINIATURE", 20.0, 1.0, 1.0, 1.0, 1.0);
+img.panel(aerial, mini, 20).save("images/miniature_tilt_shift.png");
+img.print("PSNR to original: focus band " + str(psnr_band) + " dB, top band " + str(psnr_top) + " dB");
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/miniature_tilt_shift.png");

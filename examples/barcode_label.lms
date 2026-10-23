@@ -1,0 +1,131 @@
+# EAN-13 product label: the script encodes 5901234123457 with the real
+# L/G/R module tables, computes the check digit, draws the 95 modules with
+# extended guard bars and human-readable digits, then reads the bars back
+# pixel by pixel to verify the symbol.
+out = ARGV.len() > 0 ? ARGV[0] : "barcode_label.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+fn lcode(d: int) -> int {
+  let v = 13;
+  if (d == 1) { v = 25; }
+  if (d == 2) { v = 19; }
+  if (d == 3) { v = 61; }
+  if (d == 4) { v = 35; }
+  if (d == 5) { v = 49; }
+  if (d == 6) { v = 47; }
+  if (d == 7) { v = 59; }
+  if (d == 8) { v = 55; }
+  if (d == 9) { v = 11; }
+  return v;
+}
+fn rev7(v: int) -> int {
+  let r = 0;
+  let t = v;
+  for (i in range(0, 7)) { r = r * 2 + t % 2; t = t / 2; }
+  return r;
+}
+fn parity(first: int) -> int {
+  let v = 0;
+  if (first == 1) { v = 11; }
+  if (first == 2) { v = 13; }
+  if (first == 3) { v = 14; }
+  if (first == 4) { v = 19; }
+  if (first == 5) { v = 25; }
+  if (first == 6) { v = 28; }
+  if (first == 7) { v = 21; }
+  if (first == 8) { v = 22; }
+  if (first == 9) { v = 26; }
+  return v;
+}
+fn digit(n: int, i: int) -> int {
+  let d = n;
+  for (k in range(0, 11 - i)) { d = d / 10; }
+  return d % 10;
+}
+let payload = 590123412345;
+let sum = 0;
+for (i in range(0, 12)) {
+  let d = digit(payload, i);
+  if (i % 2 == 0) { sum = sum + d; } else { sum = sum + 3 * d; }
+}
+let check = (10 - sum % 10) % 10;
+img.assert_true(check == 7);
+let first = digit(payload, 0);
+let par = parity(first);
+
+let card = img.canvas(900, 520, 0.98, 0.98, 0.96, 1.0);
+card.rect(40.0, 40.0, 820.0, 440.0, 1.0, 1.0, 1.0, 1.0);
+card.text(70.0, 110.0, "LATTICE WORKSHOP SUPPLY", 34.0, 0.10, 0.12, 0.18, 1.0);
+card.text(70.0, 150.0, "Bearing 6204-2RS, sealed, 20 x 47 x 14 mm", 20.0, 0.30, 0.32, 0.38, 1.0);
+let module = 6.0;
+let x0 = 165.0;
+let top = 200.0;
+let height = 180.0;
+let guard = 196.0;
+# bit pattern of the whole symbol, module 0..94, drawn and remembered as ints
+let bits = img.canvas(95, 1, 1.0, 1.0, 1.0, 1.0);
+fn draw7(bits: Image, code: int, m0: int) -> int {
+  let c = code;
+  for (b in range(0, 7)) {
+    let bit = (c / 64) % 2;
+    c = (c % 64) * 2;
+    if (bit == 1) { bits.set_pixel(m0 + b, 0, 0.0, 0.0, 0.0, 1.0); }
+  }
+  return m0 + 7;
+}
+bits.set_pixel(0, 0, 0.0, 0.0, 0.0, 1.0);
+bits.set_pixel(2, 0, 0.0, 0.0, 0.0, 1.0);
+let m = 3;
+for (i in range(1, 7)) {
+  let d = digit(payload, i);
+  let use_g = 0;
+  let pbits = par;
+  for (k in range(0, 6 - i)) { pbits = pbits / 2; }
+  use_g = pbits % 2;
+  let code = lcode(d);
+  if (use_g == 1) { code = rev7(127 - lcode(d)); }
+  m = draw7(bits, code, m);
+}
+bits.set_pixel(m + 1, 0, 0.0, 0.0, 0.0, 1.0);
+bits.set_pixel(m + 3, 0, 0.0, 0.0, 0.0, 1.0);
+m = m + 5;
+for (i in range(7, 12)) {
+  m = draw7(bits, 127 - lcode(digit(payload, i)), m);
+}
+m = draw7(bits, 127 - lcode(check), m);
+bits.set_pixel(m, 0, 0.0, 0.0, 0.0, 1.0);
+bits.set_pixel(m + 2, 0, 0.0, 0.0, 0.0, 1.0);
+img.assert_true(m + 3 == 95);
+# render modules; guards (0-2, 45-49, 92-94) run taller
+for (k in range(0, 95)) {
+  if (bits.pixel(k, 0, 0) < 0.5) {
+    let h = height;
+    if (k < 3 || (k > 44 && k < 50) || k > 91) { h = guard; }
+    card.rect(x0 + float(k) * module, top, module, h, 0.05, 0.05, 0.05, 1.0);
+  }
+}
+# human-readable digits under the two halves, first digit to the left
+card.text(x0 - 26.0, top + guard + 4.0, str(first), 26.0, 0.05, 0.05, 0.05, 1.0);
+let left = "";
+for (i in range(1, 7)) { left = left + str(digit(payload, i)); }
+let right = "";
+for (i in range(7, 12)) { right = right + str(digit(payload, i)); }
+right = right + str(check);
+card.text(x0 + 3.0 * module + 10.0, top + guard + 4.0, left, 26.0, 0.05, 0.05, 0.05, 1.0);
+card.text(x0 + 50.0 * module + 10.0, top + guard + 4.0, right, 26.0, 0.05, 0.05, 0.05, 1.0);
+card.text(70.0, 455.0, "EAN-13  " + str(first) + " " + left + " " + right + "   check digit " + str(check), 18.0, 0.30, 0.32, 0.38, 1.0);
+# read the symbol back: every module centre must match its bit
+let mismatches = 0;
+for (k in range(0, 95)) {
+  let dark = card.pixel(int(x0 + float(k) * module + 3.0), int(top + 90.0), 0) < 0.5;
+  let expect_dark = bits.pixel(k, 0, 0) < 0.5;
+  if (dark != expect_dark) { mismatches = mismatches + 1; }
+}
+img.assert_true(mismatches == 0);
+card.save("images/barcode_label.png");
+img.print("EAN-13 modules verified: 95, mismatches " + str(mismatches));
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/barcode_label.png");

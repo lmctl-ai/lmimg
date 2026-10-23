@@ -1,0 +1,52 @@
+# Event poster / social card with the embedded font: centred multi-size type
+# (img.text_width), a soft drop shadow made by blurring a transparent text
+# layer, a textured gradient background and a date pill. The centring is
+# verified by measuring the ink extent of the title.
+out = ARGV.len() > 0 ? ARGV[0] : "poster_text.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let bg = img.pattern(900, 520,
+  "0.08+0.30*x+0.10*noise(6*x,6*y,4)",
+  "0.05+0.10*y+0.06*noise(6*x,6*y,4)",
+  "0.30+0.25*(1-x)+0.10*noise(6*x,6*y,4)", "1");
+# a few soft light blobs
+for (i in range(0, 5)) {
+  let blob = img.canvas(220, 220, 0.0, 0.0, 0.0, 0.0);
+  blob.circle(110.0, 110.0, 70.0, 1.0, 0.8, 0.5, 0.35);
+  blob.blur(0.0, 22.0);
+  bg.blend(blob, "screen", 1.0, 40 + i * 170, 60 + (i % 2) * 220);
+}
+fn centred(target: Image, label: string, size: float, baseline: float, r: float, g: float, b: float) -> Image {
+  let w = img.text_width(label, size);
+  let x = 450.0 - w / 2.0;
+  # drop shadow: same glyphs in black on a transparent layer, blurred, offset
+  let shadow = img.canvas(900, 520, 0.0, 0.0, 0.0, 0.0);
+  shadow.text(x + 4.0, baseline + 5.0, label, size, 0.0, 0.0, 0.0, 0.8);
+  shadow.blur(0.0, 4.0);
+  target.blend(shadow, "over", 1.0, 0, 0);
+  target.text(x, baseline, label, size, r, g, b, 1.0);
+  return target;
+}
+centred(bg, "NIGHT OF", 34.0, 150.0, 1.0, 0.92, 0.75);
+centred(bg, "PROCEDURAL", 92.0, 250.0, 1.0, 1.0, 1.0);
+centred(bg, "GRAPHICS", 92.0, 345.0, 1.0, 1.0, 1.0);
+# date pill: two circles and a rectangle
+bg.circle(330.0, 420.0, 22.0, 0.95, 0.55, 0.2, 1.0).circle(570.0, 420.0, 22.0, 0.95, 0.55, 0.2, 1.0).rect(330.0, 398.0, 240.0, 44.0, 0.95, 0.55, 0.2, 1.0);
+let pill = "SAT 14 NOV  20:00  HALL B";
+let pw = img.text_width(pill, 20.0);
+bg.text(450.0 - pw / 2.0, 427.0, pill, 20.0, 0.12, 0.08, 0.05, 1.0);
+let foot = "doors 19:00  -  tickets at the venue  -  lmimg.example";
+let fw = img.text_width(foot, 14.0);
+bg.text(450.0 - fw / 2.0, 492.0, foot, 14.0, 0.85, 0.85, 0.9, 1.0);
+# verify centring: the white title ink is symmetric about x = 450
+let band = bg.copy().crop(0, 190, 900, 70).threshold(0.9);
+let leftink = band.copy().crop(0, 0, 450, 70);
+let rightink = band.copy().crop(450, 0, 450, 70);
+img.assert_close(leftink.mean(0), rightink.mean(0), 0.01);
+bg.save("images/poster_text.png");
+img.print("title ink balance left " + str(leftink.mean(0)) + " right " + str(rightink.mean(0)));
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/poster_text.png");

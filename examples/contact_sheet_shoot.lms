@@ -1,0 +1,47 @@
+# Contact sheet for a product shoot: six frames of the same set-up at
+# different exposures and white balances, each tile captioned with the frame
+# name and settings, laid out 3 x 2 with centred captions (img.text_width).
+out = ARGV.len() > 0 ? ARGV[0] : "contact_sheet_shoot.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# the set: a bottle on a lit table top
+let set = img.pattern(276, 200, "0.16+0.30*y+0.03*noise(20*x,20*y,2)", "0.15+0.26*y+0.03*noise(20*x,20*y,2)", "0.17+0.22*y+0.03*noise(20*x,20*y,2)", "1");
+set.rect(0.0, 150.0, 276.0, 50.0, 0.62, 0.50, 0.38, 1.0);
+let bottle = img.pattern(70, 150, "0.10+0.75*pow(max(0,1-pow(2*x-1,2)),0.6)*(0.6+0.4*max(0,sign(y-0.25)))", "0.35+0.45*pow(max(0,1-pow(2*x-1,2)),0.6)*(0.6+0.4*max(0,sign(y-0.25)))", "0.20+0.30*pow(max(0,1-pow(2*x-1,2)),0.6)", "max(0,sign(1-pow(2*x-1,2)-0.02))*max(0,sign(y-0.25)+sign(0.3-abs(x-0.5))+1)");
+set.blend(bottle, "over", 1.0, 103, 12);
+set.rect(118.0, 10.0, 40.0, 30.0, 0.85, 0.82, 0.70, 1.0);
+let shadow = img.canvas(120, 20, 0.0, 0.0, 0.0, 0.55);
+shadow.blur(0.0, 5.0);
+set.blend(shadow, "over", 1.0, 80, 150);
+
+fn tile(frame: Image, name: string, settings: string, index: int) -> Image {
+  let t = img.canvas(276, 233, 0.12, 0.12, 0.13, 1.0);
+  t.blend(frame, "over", 1.0, 0, 0);
+  let w = img.text_width(name, 15.0);
+  t.text(138.0 - w / 2.0, 216.0, name, 15.0, 0.92, 0.92, 0.92, 1.0);
+  let w2 = img.text_width(settings, 12.0);
+  t.text(138.0 - w2 / 2.0, 230.0, settings, 12.0, 0.65, 0.68, 0.72, 1.0);
+  t.text(8.0, 18.0, str(index), 14.0, 1.0, 0.85, 0.3, 1.0);
+  return t;
+}
+let sheet = img.montage();
+sheet.add(tile(set.copy().levels(0.0, 0.55, 1.0), "IMG_0471", "f/2.8  1/250  EV -1.0  5600K", 1));
+sheet.add(tile(set.copy(), "IMG_0472", "f/2.8  1/125  EV 0.0  5600K", 2));
+sheet.add(tile(set.copy().levels(0.0, 1.6, 0.9), "IMG_0473", "f/2.8  1/60  EV +1.0  5600K", 3));
+sheet.add(tile(set.copy().channelmix(1.08, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.84), "IMG_0474", "f/4  1/125  EV 0.0  3200K", 4));
+sheet.add(tile(set.copy().channelmix(0.9, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.12), "IMG_0475", "f/4  1/125  EV 0.0  7500K", 5));
+sheet.add(tile(set.copy().hsl(0.0, 0.0, 1.0).levels(0.05, 1.0, 0.95), "IMG_0476", "f/4  1/125  EV 0.0  mono", 6));
+let im = sheet.render(3, 18, 0.07, 0.07, 0.08, 1.0);
+img.assert_true(im.width() == 900 && im.height() == 520);
+# captions are centred: the ink extent of the first caption is symmetric about the tile centre
+let strip = im.copy().crop(18, 18 + 205, 276, 16);
+let left = strip.copy().crop(0, 0, 138, 16);
+let right = strip.copy().crop(138, 0, 138, 16);
+img.assert_close(left.mean(0), right.mean(0), 0.03);
+im.save("images/contact_sheet_shoot.png");
+img.print("contact sheet 3 x 2, caption balance " + str(left.mean(0)) + " vs " + str(right.mean(0)));
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/contact_sheet_shoot.png");
