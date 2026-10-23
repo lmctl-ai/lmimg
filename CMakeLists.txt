@@ -91,7 +91,22 @@ set(IM_PREFIX "${CMAKE_BINARY_DIR}/imagemagick-prefix")
 set(IM_BUILD "${CMAKE_BINARY_DIR}/imagemagick-build")
 file(MAKE_DIRECTORY "${IM_BUILD}")
 set(IM_CONFIGURED "${IM_BUILD}/.configured")
+set(IM_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick")
 if(WIN32)
+  # Patch a build-tree copy, keeping the verified dependency checkout intact.
+  # blob-private.h selects struct _stat64 even under MinGW, so NTStatWide
+  # must use the matching CRT function rather than wstat's struct stat ABI.
+  set(IM_SOURCE "${CMAKE_BINARY_DIR}/imagemagick-source")
+  file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/"
+    DESTINATION "${IM_SOURCE}" PATTERN ".git" EXCLUDE)
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/MagickCore/nt-base.c" IM_NT_BASE)
+  string(REPLACE "status=wstat(path_wide,attributes);"
+    "/* lmimg build patch: match the MinGW struct _stat64 ABI. */\n  status=_wstat64(path_wide,attributes);"
+    IM_NT_BASE_PATCHED "${IM_NT_BASE}")
+  if(IM_NT_BASE_PATCHED STREQUAL IM_NT_BASE)
+    message(FATAL_ERROR "ImageMagick NTStatWide patch no longer matches the pinned source")
+  endif()
+  file(WRITE "${IM_SOURCE}/MagickCore/nt-base.c" "${IM_NT_BASE_PATCHED}")
   if(DEFINED ENV{LMIMG_MSYS2_ROOT})
     file(TO_CMAKE_PATH "$ENV{LMIMG_MSYS2_ROOT}" LMIMG_MSYS2_ROOT)
     set(LMIMG_MSYS2_USR_BIN "${LMIMG_MSYS2_ROOT}/usr/bin")
@@ -104,7 +119,7 @@ if(WIN32)
     find_program(IM_CYGPATH_COMMAND NAMES cygpath REQUIRED)
   endif()
   execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure"
+    "${IM_SOURCE}/configure"
     OUTPUT_VARIABLE IM_CONFIGURE_SCRIPT OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE IM_CYGPATH_RESULT)
   if(NOT IM_CYGPATH_RESULT EQUAL 0 OR NOT IM_CONFIGURE_SCRIPT)
@@ -132,13 +147,13 @@ if(WIN32)
   set(IM_CONFIGURE_COMMAND "${IM_BASH_COMMAND}" "${IM_CONFIGURE_SCRIPT}")
 else()
   set(IM_MAKE_COMMAND make)
-  set(IM_CONFIGURE_COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure")
+  set(IM_CONFIGURE_COMMAND "${IM_SOURCE}/configure")
   find_program(IM_PKG_CONFIG NAMES pkg-config pkgconf REQUIRED)
 endif()
 set(IM_CONFIG_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/deps.lock"
   "${CMAKE_SYSTEM_NAME}|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID}|${CMAKE_CXX_COMPILER_ID}"
-  "${CODEC_PKGCONFIG_DIR}|MAGICKCORE_HDRI_ENABLE=0|MAGICKCORE_QUANTUM_DEPTH=8|MAGICKCORE_CHANNEL_MASK_DEPTH=32|static-pkgconfig-v2|sharpyuv|mingw-stat-local-v1")
+  "${CODEC_PKGCONFIG_DIR}|MAGICKCORE_HDRI_ENABLE=0|MAGICKCORE_QUANTUM_DEPTH=8|MAGICKCORE_CHANNEL_MASK_DEPTH=32|static-pkgconfig-v2|sharpyuv|mingw-stat-source-v1")
 string(SHA256 IM_CONFIG_KEY "${IM_CONFIG_INPUTS}")
 set(IM_NEEDS_CONFIGURE TRUE)
 if(EXISTS "${IM_CONFIGURED}")
@@ -151,6 +166,16 @@ if(EXISTS "${IM_CONFIGURED}")
     file(MAKE_DIRECTORY "${IM_BUILD}")
   endif()
 endif()
+if(WIN32 AND DEFINED LMIMG_MSYS2_USR_BIN)
+  # Use one POSIX tool installation for configure, make, and install, with
+  # the same native compiler that built the codec archives.
+  set(ENV{PATH} "${LMIMG_MSYS2_USR_BIN};$ENV{PATH}")
+  set(ENV{CONFIG_SHELL} "${IM_BASH_COMMAND}")
+  set(ENV{SHELL} "${IM_BASH_COMMAND}")
+  set(ENV{CC} "${CMAKE_C_COMPILER}")
+  set(ENV{CXX} "${CMAKE_CXX_COMPILER}")
+  message(STATUS "Windows ImageMagick POSIX tools: ${LMIMG_MSYS2_USR_BIN}")
+endif()
 if(IM_NEEDS_CONFIGURE)
 if(WIN32)
   execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${CODEC_PREFIX}/include"
@@ -160,16 +185,6 @@ if(WIN32)
   set(IM_CPPFLAGS "-I${CODEC_INCLUDE_BASH}")
   set(IM_LDFLAGS "-L${CODEC_LIB_BASH}")
   set(IM_LIBS "-L${CODEC_LIB_BASH} -lsharpyuv")
-  # blob-private.h selects _stat64 on Windows before nt-base-private.h sees
-  # the MinGW CRT declaration. Include sys/stat.h first, then select the
-  # matching wide 64-bit entry point for NTStatWide without editing the pinned
-  # ImageMagick checkout.
-  # Autoconf and its flat Automake build both compile from IM_BUILD. A
-  # relative forced-include avoids MSYS rewriting a joined drive-path flag
-  # (for example -includeD:/a/... became the invalid D:A:/...).
-  file(WRITE "${IM_BUILD}/mingw-stat-compat.h"
-    "#include <sys/stat.h>\n#if defined(__MINGW32__)\n#define wstat _wstat64\n#endif\n")
-  set(IM_CFLAGS "-include mingw-stat-compat.h")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/static-codec-pkg-config.sh.in"
     "${IM_PKG_CONFIG_NATIVE}" @ONLY)
   file(CHMOD "${IM_PKG_CONFIG_NATIVE}"
@@ -188,37 +203,11 @@ else()
   set(IM_CPPFLAGS "-I${CODEC_PREFIX}/include")
   set(IM_LDFLAGS "-L${CODEC_PREFIX}/lib")
   set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
-  set(IM_CFLAGS)
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
-endif()
-if(WIN32 AND DEFINED LMIMG_MSYS2_USR_BIN)
-  # Keep Autoconf, expr, sed, make, and the shell in one MSYS2 installation.
-  # Git Bash utilities earlier on PATH can otherwise change Autoconf's option
-  # parsing while the configure script is running under MSYS2 bash.
-  get_filename_component(IM_NATIVE_COMPILER_DIR "${CMAKE_C_COMPILER}" DIRECTORY)
-  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${IM_NATIVE_COMPILER_DIR}"
-    OUTPUT_VARIABLE IM_NATIVE_COMPILER_DIR_BASH OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE IM_CYGPATH_COMPILER_RESULT)
-  if(NOT IM_CYGPATH_COMPILER_RESULT EQUAL 0 OR NOT IM_NATIVE_COMPILER_DIR_BASH)
-    message(FATAL_ERROR "cygpath could not translate the native compiler directory")
-  endif()
-  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${CMAKE_C_COMPILER}"
-    OUTPUT_VARIABLE IM_NATIVE_COMPILER_BASH OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE IM_CYGPATH_CC_RESULT)
-  if(NOT IM_CYGPATH_CC_RESULT EQUAL 0 OR NOT IM_NATIVE_COMPILER_BASH)
-    message(FATAL_ERROR "cygpath could not translate the native C compiler")
-  endif()
-  set(ENV{PATH} "${LMIMG_MSYS2_USR_BIN};${IM_NATIVE_COMPILER_DIR_BASH};$ENV{PATH}")
-  set(ENV{CONFIG_SHELL} "${IM_BASH_COMMAND}")
-  set(ENV{SHELL} "${IM_BASH_COMMAND}")
-  set(ENV{CC} "${CMAKE_C_COMPILER}")
-  set(ENV{CXX} "${CMAKE_CXX_COMPILER}")
-  message(STATUS "Windows ImageMagick POSIX tools: ${LMIMG_MSYS2_USR_BIN}")
 endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
     "CPPFLAGS=${IM_CPPFLAGS}"
-    "CFLAGS=${IM_CFLAGS}"
     "LDFLAGS=${IM_LDFLAGS}"
     "LIBS=${IM_LIBS}"
     "PKG_CONFIG=${IM_PKG_CONFIG}"

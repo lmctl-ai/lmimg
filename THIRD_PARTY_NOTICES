@@ -6,6 +6,9 @@ Complete upstream license texts follow. Source commits are pinned in deps.lock
 and sdk.lock. This software is based in part on the work of the Independent JPEG
 Group. No GIMP, GEGL, Ghostscript or GPL/LGPL image-processing delegate is linked.
 ImageMagick loadable modules and external delegates are disabled.
+Windows build modification: NTStatWide calls _wstat64 to match its _stat64
+buffer. The marked modification is applied only to a build-tree source copy;
+the pinned upstream checkout remains unchanged.
 
 
 ImageMagick license
