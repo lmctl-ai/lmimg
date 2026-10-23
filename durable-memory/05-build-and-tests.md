@@ -39,3 +39,8 @@ patent/notices and README completeness, loop operand kinds, and public autorun.
 The VM fixture now checks each malformed range operand independently as well as
 both together. sdk.lock still verifies the unchanged vendored header; CMake
 generates a marked copy with the two runtime checks.
+
+CI keeps the required global compiler at npm 0.2.369. That older lmctl CLI
+does not have `autorun`, so the public-caption integration check uses an
+isolated, separately pinned lmctl 0.2.401 via `LMIMG_AUTORUN_CLI`. The isolated
+package is not added to PATH and does not replace the compiler under test.

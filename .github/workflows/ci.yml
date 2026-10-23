@@ -109,6 +109,9 @@ jobs:
           npm i -g @lmctl-ai/lmctl@0.2.369
           scripts/select-compiler.sh | tee compiler.txt
           grep -q lmscript compiler.txt || { echo "no v5 compiler available"; exit 1; }
+          # Keep the mandated compiler pin; autorun is a newer CLI command.
+          npm i --prefix .ci-autorun --no-audit --no-fund @lmctl-ai/lmctl@0.2.401
+          echo "LMIMG_AUTORUN_CLI=$PWD/.ci-autorun/node_modules/.bin/lmctl" >> "$GITHUB_ENV"
 
       - name: python3 shim (windows)
         if: runner.os == 'Windows' && env.ONLY_OK == 'true'

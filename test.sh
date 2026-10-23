@@ -154,9 +154,11 @@ ok 'review m11: runtime terms and source/relink recipe pointers remain present'
 if [ "${LMIMG_TEST_NETWORK:-0}" = 1 ]; then
  # Remove the build directory prepended above: this must use release installation.
  AUTORUN_PATH="${PATH#*:}"
+ AUTORUN_CLI="${LMIMG_AUTORUN_CLI:-$(command -v lmctl)}"
+ AUTORUN_CLI="$(cd "$(dirname "$AUTORUN_CLI")" && pwd)/$(basename "$AUTORUN_CLI")"
  if PATH="$AUTORUN_PATH" command -v lmimg >/dev/null 2>&1; then fail 'public autorun must not find lmimg on PATH'; fi
  mkdir -p "$WORK/public-autorun"
- (cd "$WORK/public-autorun"; PATH="$AUTORUN_PATH" LMSCRIPT_TOOL_CACHE="$WORK/release-cache" "$TIMEOUT" 300 lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms) >"$WORK/public-autorun.log" 2>&1 || { cat "$WORK/public-autorun.log"; fail 'public release autorun'; }
+ (cd "$WORK/public-autorun"; PATH="$AUTORUN_PATH" LMSCRIPT_TOOL_CACHE="$WORK/release-cache" "$TIMEOUT" 300 "$AUTORUN_CLI" autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms) >"$WORK/public-autorun.log" 2>&1 || { cat "$WORK/public-autorun.log"; fail 'public release autorun'; }
  python3 - "$WORK/public-autorun/images/gradient_studio.png" <<'PY'
 from pathlib import Path
 import struct,sys
