@@ -254,6 +254,11 @@ target_link_libraries(lmimg_magick INTERFACE
 if(UNIX AND NOT APPLE)
   target_link_libraries(lmimg_magick INTERFACE m)
 endif()
+if(WIN32)
+  # ImageMagick's MinGW configure probe records these native drawing and
+  # window API imports in its static archive closure.
+  target_link_libraries(lmimg_magick INTERFACE gdi32 user32)
+endif()
 target_include_directories(lmimg_magick INTERFACE
   "${IM_PREFIX}/include/ImageMagick-7" "${IM_PREFIX}/include")
 
