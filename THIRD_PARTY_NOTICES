@@ -1,20 +1,78 @@
 lmimg third-party notices
 =========================
 
-ImageMagick 7.1.2-34 (MagickCore and MagickWand)
----------------------------------------------------
+This file is shipped with every lmimg binary. The source checkouts named below
+are fetched at the exact commits in deps.lock; their complete upstream license
+files remain available in those checkouts and are the legal source for these
+attributions. lmimg does not link GPL, LGPL, AGPL, Ghostscript, FFmpeg, LCMS,
+X11, or any other copyleft delegate.
+
+ImageMagick 7.1.2-34, MagickCore and MagickWand
+-------------------------------------------------
 Copyright (C) 1999 ImageMagick Studio LLC.
+License: ImageMagick License, reproduced at https://imagemagick.org/license/
+and in third_party/imagemagick/LICENSE at commit
+a0c4bf729a26a5c2feb28b0365b47a8db736078a. ImageMagick permits use,
+modification, and redistribution with attribution and a copy of its license.
+lmimg builds Q8/non-HDRI static MagickCore and MagickWand, and disables
+modules, OpenMP, system font discovery, and external delegate execution.
 
-ImageMagick is distributed under the ImageMagick License.  The complete
-license text is included in the pinned source checkout at
-third_party/imagemagick/LICENSE and is available at:
-https://imagemagick.org/license/
+zlib 1.3.1
+----------
+Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler.
+The zlib license and notices are in third_party/zlib/LICENSE at commit
+51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf. This software is provided
+as-is, without express or implied warranty. The authors permit use for any
+purpose, including commercial applications, and require that the origin not be
+misrepresented and altered source be marked.
 
-ImageMagick permits use, modification, and redistribution, provided that the
-license and clear attribution are included.  lmimg builds static MagickCore
-and MagickWand with loadable modules and delegate execution disabled.  Any
-optional image delegates found by the build are separately licensed and must
-be recorded here before distribution.
+libpng 1.6.43
+-------------
+Copyright (C) 2004, 2006-2024 Glenn Randers-Pehrson and contributors.
+libpng is distributed under the libpng license, a permissive copyright license
+with no warranty. The complete license and notices are in
+third_party/libpng/LICENSE at commit ed217e3e601d8e462f7fd1e04bed43ac42212429.
 
-No GPL, LGPL, AGPL, Ghostscript, FFmpeg, LCMS, or X11 code is linked by the
-intended lmimg build.
+libjpeg-turbo
+-------------
+Copyright (C) 2009-2024 D. R. Commander and contributors; portions copyright
+the Independent JPEG Group and IBM. libjpeg-turbo uses the IJG, BSD-style, and
+zlib licenses. The complete authoritative text is in
+third_party/libjpeg-turbo/LICENSE.md at commit
+289df647c0f208dad7db63f24830361257812b1b.
+
+libtiff 4.x
+-----------
+Copyright (C) 1988-2023 Sam Leffler and contributors. libtiff is distributed
+under its permissive TIFF license and disclaimer. The complete license text is
+in third_party/libtiff/LICENSE.md at commit
+8b20804fc0ddeaa93667b799b5e1a2a7dc9e3fb2.
+
+libwebp 1.3.x and libsharpyuv
+-----------------------------
+Copyright (C) 2010-2023 Google Inc. and contributors. libwebp is distributed
+under a BSD-style license; the complete license and third-party notices are in
+third_party/libwebp/COPYING at commit
+ca332209cb5567c9b249c86788cb2dbf8847e760.
+
+stb_truetype
+------------
+Copyright (C) Sean Barrett. stb_truetype is public domain or MIT licensed at
+the user's option. The complete text is in third_party/stb/LICENSE at commit
+003501f6d7a8668ce8b6d875e34dd97ad0d5d5b5.
+
+Roboto Regular embedded font
+----------------------------
+Copyright (C) 2011 Google Inc. and contributors. Roboto is licensed under the
+Apache License, Version 2.0. The complete text and NOTICE are in
+third_party/roboto/LICENSE at commit 38062f4b4a0be4346d07a928408da21602545e9e.
+The embedded font is used only through the in-memory stb_truetype rasterizer;
+lmimg performs no system font search.
+
+cpp-dsl-sdk
+-----------
+Copyright (C) lmctl-ai contributors. The vendored SDK header is distributed
+under the MIT License; the complete text is in LICENSE in this repository.
+
+All lmimg implementation code is Copyright (C) 2026 Mike Ma and is licensed
+under the MIT License in LICENSE.

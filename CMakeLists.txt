@@ -16,7 +16,14 @@ endif()
 # at these static archives through pkg-config; no host codec or runtime module
 # is used by the resulting executable.
 set(CODEC_PREFIX "${CMAKE_BINARY_DIR}/codec-prefix")
-set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig:${CODEC_PREFIX}/share/pkgconfig")
+set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig")
+if(EXISTS "${CODEC_PREFIX}/share/pkgconfig")
+  if(WIN32)
+    set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig;${CODEC_PREFIX}/share/pkgconfig")
+  else()
+    set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig:${CODEC_PREFIX}/share/pkgconfig")
+  endif()
+endif()
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/codec-build")
 function(build_codec name source opts)
   set(dir "${CMAKE_BINARY_DIR}/codec-build/${name}")
@@ -76,6 +83,7 @@ else()
   set(IM_MAKE_COMMAND make)
   set(IM_CONFIGURE_COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure")
 endif()
+find_program(PKG_CONFIG_EXECUTABLE NAMES pkg-config pkgconf REQUIRED)
 set(IM_CONFIG_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/deps.lock"
   "${CMAKE_SYSTEM_NAME}|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID}|${CMAKE_CXX_COMPILER_ID}"
@@ -98,7 +106,7 @@ execute_process(
     "CPPFLAGS=-I${CODEC_PREFIX}/include"
     "LDFLAGS=-L${CODEC_PREFIX}/lib"
     "LIBS=-L${CODEC_PREFIX}/lib -lsharpyuv"
-    "PKG_CONFIG=pkg-config --static"
+    "PKG_CONFIG=${PKG_CONFIG_EXECUTABLE}"
     "PKG_CONFIG_PATH=${CODEC_PKGCONFIG_DIR}"
     "PKG_CONFIG_LIBDIR=${CODEC_PKGCONFIG_DIR}"
     ${IM_CONFIGURE_COMMAND}
@@ -119,6 +127,21 @@ if(NOT IM_CONFIGURE_RESULT EQUAL 0)
 endif()
 file(WRITE "${IM_CONFIGURED}" "${IM_CONFIG_KEY}\n")
 endif()
+
+# A successful configure is not enough: ImageMagick treats optional delegates
+# as soft failures.  Stop at configure time if one of the four formats that
+# lmimg promises was omitted from the static MagickCore build.
+set(IM_CONFIG_HEADER "${IM_BUILD}/config/config.h")
+if(NOT EXISTS "${IM_CONFIG_HEADER}")
+  message(FATAL_ERROR "ImageMagick config header missing: ${IM_CONFIG_HEADER}")
+endif()
+file(READ "${IM_CONFIG_HEADER}" IM_CONFIG_TEXT)
+foreach(delegate PNG JPEG TIFF WEBP ZLIB)
+  if(NOT IM_CONFIG_TEXT MATCHES "#define[ \t]+${delegate}_DELEGATE[ \t]+1")
+    message(FATAL_ERROR "ImageMagick ${delegate} delegate was not detected; check pinned codec prefix and pkg-config")
+  endif()
+endforeach()
+message(STATUS "ImageMagick delegates: PNG JPEG TIFF WEBP ZLIB (static)")
 execute_process(COMMAND "${IM_MAKE_COMMAND}" -j2
   WORKING_DIRECTORY "${IM_BUILD}" RESULT_VARIABLE IM_MAKE_RESULT)
 if(NOT IM_MAKE_RESULT EQUAL 0)
