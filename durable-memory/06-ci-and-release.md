@@ -39,7 +39,10 @@ a relative include then predeclared strchr during Autoconf's deliberately
 undeclared-function test. The source correction leaves those real probes intact.
 Failure-only CI artifacts preserve complete configuration and final-link logs.
 Windows consumers define ImageMagick's `_LIB` macro; otherwise its headers infer
-DLL imports from CRT macros even though the linked archives are static.
+DLL imports from CRT macros even though the linked archives are static. Its
+built-in Windows URL coder also references URLDownloadToFileA, so the static
+closure links the system urlmon library. Runtime raster-format and policy
+restrictions remain in force.
 
 On macOS, PNG_SHARED=OFF does not disable libpng's separate framework target.
 PNG_FRAMEWORK=OFF and CMAKE_FIND_FRAMEWORK=NEVER keep the static executable from
