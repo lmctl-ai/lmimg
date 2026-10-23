@@ -78,7 +78,22 @@ file(MAKE_DIRECTORY "${IM_BUILD}")
 set(IM_CONFIGURED "${IM_BUILD}/.configured")
 if(WIN32)
   find_program(IM_MAKE_COMMAND NAMES mingw32-make make REQUIRED)
-  set(IM_CONFIGURE_COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure")
+  find_program(IM_BASH_COMMAND NAMES bash REQUIRED)
+  find_program(IM_CYGPATH_COMMAND NAMES cygpath REQUIRED)
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure"
+    OUTPUT_VARIABLE IM_CONFIGURE_SCRIPT OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_RESULT)
+  if(NOT IM_CYGPATH_RESULT EQUAL 0 OR NOT IM_CONFIGURE_SCRIPT)
+    message(FATAL_ERROR "cygpath could not translate the ImageMagick configure script")
+  endif()
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${IM_PREFIX}"
+    OUTPUT_VARIABLE IM_PREFIX_BASH OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_PREFIX_RESULT)
+  if(NOT IM_CYGPATH_PREFIX_RESULT EQUAL 0 OR NOT IM_PREFIX_BASH)
+    message(FATAL_ERROR "cygpath could not translate the ImageMagick install prefix")
+  endif()
+  set(IM_CONFIGURE_COMMAND "${IM_BASH_COMMAND}" "${IM_CONFIGURE_SCRIPT}")
 else()
   set(IM_MAKE_COMMAND make)
   set(IM_CONFIGURE_COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure")
@@ -101,16 +116,31 @@ if(EXISTS "${IM_CONFIGURED}")
   endif()
 endif()
 if(IM_NEEDS_CONFIGURE)
+if(WIN32)
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${CODEC_PREFIX}/include"
+    OUTPUT_VARIABLE CODEC_INCLUDE_BASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${CODEC_PREFIX}/lib"
+    OUTPUT_VARIABLE CODEC_LIB_BASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(IM_CPPFLAGS "-I${CODEC_INCLUDE_BASH}")
+  set(IM_LDFLAGS "-L${CODEC_LIB_BASH}")
+  set(IM_LIBS "-L${CODEC_LIB_BASH} -lsharpyuv")
+  set(IM_PREFIX_CONFIGURE "${IM_PREFIX_BASH}")
+else()
+  set(IM_CPPFLAGS "-I${CODEC_PREFIX}/include")
+  set(IM_LDFLAGS "-L${CODEC_PREFIX}/lib")
+  set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
+  set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
+endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
-    "CPPFLAGS=-I${CODEC_PREFIX}/include"
-    "LDFLAGS=-L${CODEC_PREFIX}/lib"
-    "LIBS=-L${CODEC_PREFIX}/lib -lsharpyuv"
+    "CPPFLAGS=${IM_CPPFLAGS}"
+    "LDFLAGS=${IM_LDFLAGS}"
+    "LIBS=${IM_LIBS}"
     "PKG_CONFIG=${PKG_CONFIG_EXECUTABLE}"
     "PKG_CONFIG_PATH=${CODEC_PKGCONFIG_DIR}"
     "PKG_CONFIG_LIBDIR=${CODEC_PKGCONFIG_DIR}"
     ${IM_CONFIGURE_COMMAND}
-    "--prefix=${IM_PREFIX}" --disable-shared --enable-static
+    "--prefix=${IM_PREFIX_CONFIGURE}" --disable-shared --enable-static
     --with-quantum-depth=8 --disable-hdri
     --without-modules --disable-openmp --without-x --without-perl
     --without-magick-plus-plus --without-xml --without-bzlib --without-djvu
