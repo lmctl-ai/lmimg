@@ -2,11 +2,13 @@
 #include <MagickWand/MagickWand.h>
 
 #include <cmath>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace fs = std::filesystem;
 using lmimg::Color;
@@ -135,6 +137,15 @@ int main(int argc, char **argv) {
     dot.set_pixel(2, 2, {1, 1, 1, 1}).morphology("dilate", 1);
     check(dot.pixel(1, 2).r > 0.95 && dot.pixel(0, 0).r < 0.05,
           "morphology dilation");
+    Img degenerate = Img::create(1, 1, {0.5, 0.25, 0.75, 1});
+    check(std::isfinite(degenerate.clone().tilt_shift(2, 0, 1).pixel(0, 0).r),
+          "tilt shift 1x1 remains finite");
+    check(std::isfinite(degenerate.clone().vignette().pixel(0, 0).r),
+          "vignette 1x1 remains finite");
+    check(std::isfinite(degenerate.clone().unsharp(1, 1, 1, 0).pixel(0, 0).r),
+          "unsharp 1x1 remains finite");
+    check(std::isfinite(degenerate.clone().morphology("median", 1).pixel(0, 0).r),
+          "morphology 1x1 remains finite");
     Img mask = Img::create(5, 5, {0, 0, 0, 0});
     mask.set_pixel(2, 2, {1, 1, 1, 1});
     Img masked = Img::create(5, 5, {1, 0, 0, 1});
@@ -208,6 +219,16 @@ int main(int argc, char **argv) {
     Img screened = backdrop.clone().blend(foreground, "screen", 1);
     close(screened.pixel(0, 0).r, 0.6, 0.006, "screen red known pair");
     close(screened.pixel(0, 0).b, 0.9, 0.006, "screen blue known pair");
+    const std::array<std::pair<std::string, double>, 7> modes = {{{
+        "overlay", 0.24}, {"difference", 0.4}, {"darken", 0.2},
+        {"lighten", 0.6}, {"addition", 0.8}, {"subtract", 0.0},
+        {"over", 0.6}}};
+    for (const auto &[mode, expected] : modes) {
+      Img mode_result = Img::create(1, 1, {0.2, 0.4, 0.6, 1});
+      mode_result.blend(Img::create(1, 1, {0.6, 0.3, 0.2, 1}), mode, 1);
+      close(mode_result.pixel(0, 0).r, expected, 0.01,
+            mode + " blend red known pair");
+    }
     Img overlay = Img::create(2, 2, {1, 0, 0, 0.5});
     Img base = Img::create(4, 4, {0, 0, 1, 1});
     base.blend(overlay, "over", 1.0, 1, 1);
@@ -237,6 +258,17 @@ int main(int argc, char **argv) {
     codec_roundtrip(ramp, dir, "WEBP", "webp");
     codec_roundtrip(ramp, dir, "BMP", "bmp");
     codec_roundtrip(ramp, dir, "PNM", "pnm");
+    Img gray = Img::create(2, 1, {0.25, 0.25, 0.25, 1});
+    gray.save((dir / "gray.pgm").string());
+    gray.save((dir / "gray.pbm").string());
+    auto magic = [](const fs::path &path) {
+      std::ifstream in(path, std::ios::binary);
+      std::string header;
+      std::getline(in, header);
+      return header;
+    };
+    check(magic(dir / "gray.pgm") == "P5", "PGM writer emits grayscale P5");
+    check(magic(dir / "gray.pbm") == "P4", "PBM writer emits bitmap P4");
     codec_roundtrip(ramp, dir, "GIF", "gif");
 
     Img frame_a = Img::create(12, 8, {1, 0, 0, 1});

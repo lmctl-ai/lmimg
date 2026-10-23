@@ -172,7 +172,7 @@ void register_host(dslvm::Registry &r, Host &h) {
           (void)h;
           (void)p;
           (void)a;
-          image(p).morphology(a[0].s, integer(a[1], 0, 32));
+          image(p).morphology(a[0].s, integer(a[1], 0, 16));
           return Value::object("Image", p);
         });
   check(r, "Image", "mask", {"Image"}, "Image",
@@ -237,7 +237,10 @@ void register_host(dslvm::Registry &r, Host &h) {
           (void)a;
           if (a[2].f < 0 || a[2].f > 1)
             throw dslvm::Error("layer opacity must be in [0,1]");
-          if (a[1].s != "over" && a[1].s != "multiply" && a[1].s != "screen")
+          if (a[1].s != "over" && a[1].s != "multiply" && a[1].s != "screen" &&
+              a[1].s != "overlay" && a[1].s != "difference" &&
+              a[1].s != "darken" && a[1].s != "lighten" &&
+              a[1].s != "addition" && a[1].s != "subtract")
             throw dslvm::Error("unsupported layer blend");
           auto &stack = *static_cast<LayerStack *>(p);
           stack.layers.push_back({image(a[0].obj).clone(), a[1].s, a[2].f,
@@ -252,7 +255,10 @@ void register_host(dslvm::Registry &r, Host &h) {
           (void)a;
           if (a[3].f < 0 || a[3].f > 1)
             throw dslvm::Error("layer opacity must be in [0,1]");
-          if (a[2].s != "over" && a[2].s != "multiply" && a[2].s != "screen")
+          if (a[2].s != "over" && a[2].s != "multiply" && a[2].s != "screen" &&
+              a[2].s != "overlay" && a[2].s != "difference" &&
+              a[2].s != "darken" && a[2].s != "lighten" &&
+              a[2].s != "addition" && a[2].s != "subtract")
             throw dslvm::Error("unsupported layer blend");
           auto &stack = *static_cast<LayerStack *>(p);
           auto im = image(a[0].obj).clone();

@@ -1,0 +1,19 @@
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let row=img.canvas(9,1,0.0,0.0,0.0,1.0);
+row.set_pixel(4,0,1.0,1.0,1.0,1.0).tilt_shift(2.0,0.0,1.0);
+img.assert_close(row.pixel(4,0,0),1.0,0.004);
+let one=img.canvas(1,1,0.5,0.25,0.75,1.0);
+one.vignette(0.0,0.0).unsharp(1.0,1.0,1.0,0.0).morphology("median",1);
+img.assert_true(one.pixel(0,0,0)>=0.0 && one.pixel(0,0,0)<=1.0);
+let base=img.canvas(1,1,0.2,0.4,0.6,1.0);
+let top=img.canvas(1,1,0.6,0.3,0.2,1.0);
+let modes=["overlay","difference","darken","lighten","addition","subtract"];
+for (mode in modes) {
+  let sample=base.copy().blend(top,mode,1.0,0,0);
+  img.assert_true(sample.pixel(0,0,0)>=0.0 && sample.pixel(0,0,0)<=1.0);
+}
+let layers=img.layers(1,1).add(top,"overlay",1.0,0,0).render();
+img.assert_close(layers.pixel(0,0,0),0.24,0.01);
+end _dsl_
+out=ARGV.len()>0 ? ARGV[0] : "review_image.dslb";
+savedsl(p,out);

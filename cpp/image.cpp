@@ -94,7 +94,7 @@ bool supported_format(std::string e) {
     c = char(std::tolower((unsigned char)c));
   return e == "png" || e == "jpg" || e == "jpeg" || e == "tif" || e == "tiff" ||
          e == "webp" || e == "gif" || e == "bmp" || e == "pnm" || e == "ppm" ||
-         e == "pgm";
+         e == "pgm" || e == "pbm";
 }
 void check_path(const std::string &path) {
   if (path.empty() || path.find('\0') != std::string::npos)
@@ -124,12 +124,14 @@ std::string path_format(const std::string &path) {
     e = "JPEG";
   if (e == "TIF")
     e = "TIFF";
-  if (e == "PPM" || e == "PGM")
-    e = "PNM";
   return e;
 }
 PixelWand *color_wand(Color c) {
   valid_color(c);
+  c.r = clip(c.r);
+  c.g = clip(c.g);
+  c.b = clip(c.b);
+  c.a = clip(c.a);
   PixelWand *p = NewPixelWand();
   if (!p)
     throw std::runtime_error("pixel allocation failed");
@@ -344,7 +346,12 @@ Image Image::open(const std::string &path) {
   init();
   check_path(path);
   const std::string read_path = path + "[0]";
-  auto file_bytes = std::filesystem::file_size(path);
+  std::uintmax_t file_bytes;
+  try {
+    file_bytes = std::filesystem::file_size(path);
+  } catch (const std::filesystem::filesystem_error &) {
+    throw std::runtime_error("cannot open image file: " + path);
+  }
   if (file_bytes > (std::numeric_limits<size_t>::max() - 2 * 1024 * 1024) / 2)
     throw std::invalid_argument("image file too large");
   membudget::require(static_cast<size_t>(file_bytes) * 2 + 2 * 1024 * 1024);
@@ -353,8 +360,6 @@ Image Image::open(const std::string &path) {
     throw std::runtime_error("image allocation failed");
   try {
     ok(MagickPingImage(probe, read_path.c_str()), probe, "inspect image");
-    if (MagickGetNumberImages(probe) > 1)
-      throw std::invalid_argument("multi-frame input is not supported");
     valid_size(MagickGetImageWidth(probe), MagickGetImageHeight(probe));
   } catch (...) {
     DestroyMagickWand(probe);
@@ -371,8 +376,6 @@ Image Image::open(const std::string &path) {
     throw;
   }
   try {
-    if (MagickGetNumberImages(p) > 1)
-      throw std::invalid_argument("multi-frame input is not supported");
     valid_size(MagickGetImageWidth(p), MagickGetImageHeight(p));
   } catch (...) {
     DestroyMagickWand(p);
@@ -402,6 +405,9 @@ void Image::save(const std::string &path, const std::string &format) const {
   if (!p)
     fail(impl_->wand, "clone");
   ok(MagickSetFormat(p.get(), format.c_str()), p.get(), "set format");
+  if (format == "PGM" || format == "PBM")
+    ok(MagickSetImageColorspace(p.get(), GRAYColorspace), p.get(),
+       "set grayscale format");
   ok(MagickSetOption(p.get(), "png:exclude-chunks", "date,time"), p.get(),
      "stable PNG metadata");
   ok(MagickSetOption(p.get(), "webp:lossless", "true"), p.get(),
@@ -663,7 +669,7 @@ Image &Image::vignette(double radius, double sigma) {
     std::vector<double> a;
     export_rgba(p, a);
     double cx = (w - 1) / 2., cy = (h - 1) / 2.,
-           r = radius > 0 ? radius : std::min(w, h) / 2.;
+           r = radius > 0 ? radius : std::max(1., std::min(w, h) / 2.);
     for (size_t y = 0; y < h; y++)
       for (size_t x = 0; x < w; x++) {
         double d = std::sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) / r;
@@ -696,7 +702,7 @@ Image &Image::tilt_shift(double radius, double a, double b) {
                                dst.data()),
        q.get(), "tilt shift blurred pixels");
     for (size_t y = 0; y < h; y++) {
-      double z = double(y) / (h ? h - 1 : 1);
+      double z = double(y) / (h > 1 ? h - 1 : 1);
       if (z >= a && z <= b)
         for (size_t x = 0; x < w; x++)
           for (int k = 0; k < 4; k++)
@@ -902,7 +908,9 @@ Image &Image::blend(const Image &o, const std::string &mode, double opacity,
   o.require_image();
   if (!std::isfinite(opacity) || opacity < 0 || opacity > 1)
     throw std::invalid_argument("opacity must be in [0,1]");
-  if (mode != "over" && mode != "multiply" && mode != "screen")
+  if (mode != "over" && mode != "multiply" && mode != "screen" &&
+      mode != "overlay" && mode != "difference" && mode != "darken" &&
+      mode != "lighten" && mode != "addition" && mode != "subtract")
     throw std::invalid_argument("unsupported blend mode");
   return mutate([&](MagickWand *p) {
     size_t w = MagickGetImageWidth(p), h = MagickGetImageHeight(p),
@@ -919,7 +927,18 @@ Image &Image::blend(const Image &o, const std::string &mode, double opacity,
           double cs = b[si + k], cb = a[di + k],
                  mix = mode == "multiply"
                            ? cb * cs
-                           : (mode == "screen" ? 1 - (1 - cb) * (1 - cs) : cs);
+                           : mode == "screen"
+                                 ? 1 - (1 - cb) * (1 - cs)
+                                 : mode == "overlay"
+                                       ? (cb < 0.5 ? 2 * cb * cs
+                                                   : 1 - 2 * (1 - cb) * (1 - cs))
+                                       : mode == "difference" ? std::abs(cb - cs)
+                                       : mode == "darken" ? std::min(cb, cs)
+                                       : mode == "lighten" ? std::max(cb, cs)
+                                       : mode == "addition" ? std::min(1., cb + cs)
+                                                             : mode == "subtract"
+                                                                   ? std::max(0., cb - cs)
+                                                                   : cs;
           double prem = as * (1 - ab) * cs + as * ab * mix + (1 - as) * ab * cb;
           a[di + k] = ao > 1e-15 ? clip(prem / ao) : 0;
         }
@@ -988,6 +1007,10 @@ Image &Image::text(double x, double y, const std::string &value, double size,
     throw std::invalid_argument("text requires bounded finite coordinates, "
                                 "ASCII text, and embedded font");
   valid_color(c);
+  c.r = clip(c.r);
+  c.g = clip(c.g);
+  c.b = clip(c.b);
+  c.a = clip(c.a);
   membudget::require(
       std::size_t(std::ceil(size)) * std::size_t(std::ceil(size)) * 4 + 4096);
   return mutate([&](MagickWand *p) {
