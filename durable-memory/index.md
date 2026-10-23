@@ -8,3 +8,5 @@
 - [06 — CI and release](06-ci-and-release.md)
 - [07 — Reproducible examples](07-examples.md)
 - [08 — Limitations](08-limitations.md)
+
+- [09 — v0.1.1 independent-review response](09-review-0.1.1.md)

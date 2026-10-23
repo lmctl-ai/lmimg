@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import struct
+import re
 from pathlib import Path
 
 
@@ -34,8 +35,8 @@ def main() -> int:
     parser.add_argument("--generated-dir", type=Path, default=ROOT / "images")
     args = parser.parse_args()
     examples = sorted(p.stem for p in (ROOT / "examples").glob("*.lms"))
-    if not examples:
-        raise SystemExit("no examples found")
+    if len(examples) < 12:
+        raise SystemExit("gallery requires at least 12 image-producing examples")
     gallery = ROOT / "docs" / "images"
     missing = [name for name in examples if not (gallery / f"{name}.png").is_file()]
     if missing:
@@ -68,10 +69,27 @@ def main() -> int:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for name in examples:
         url = f"https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/{name}.lms"
-        if f"lmctl autorun {url}" not in readme:
-            raise SystemExit(f"README missing autorun URL for {name}")
+        caption = re.compile(
+            r"!\[[^\]]*\]\(docs/images/" + re.escape(name) +
+            r"\.png\)(?:<br>|\s)*`" + re.escape(f"lmctl autorun {url}") + r"`"
+        )
+        if not caption.search(readme):
+            raise SystemExit(f"README missing image with autorun caption for {name}")
+    gif_url = "https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms"
+    gif_caption = re.compile(
+        r"!\[[^\]]*\]\(docs/images/animation_wave\.gif\)(?:<br>|\s)*`" +
+        re.escape(f"lmctl autorun {gif_url}") + r"`"
+    )
+    if not gif_caption.search(readme):
+        raise SystemExit("README missing GIF autorun caption")
     if args.generated:
-        print(f"checked {len(examples)} PNG gallery figures and animation_wave.gif")
+        for name, dimensions in [("batch_small", (180, 240)),
+                                 ("batch_medium", (210, 280)),
+                                 ("batch_large", (240, 320))]:
+            fresh = args.generated_dir / f"{name}.png"
+            if not fresh.is_file() or png_size(fresh) != dimensions:
+                raise SystemExit(f"missing or distorted batch deliverable: {fresh}")
+        print(f"checked {len(examples)} PNG gallery figures, three batch files and animation_wave.gif")
     return 0
 
 
