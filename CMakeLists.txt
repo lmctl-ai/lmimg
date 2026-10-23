@@ -108,12 +108,25 @@ if(WIN32)
   if(NOT IM_CYGPATH_PREFIX_RESULT EQUAL 0 OR NOT IM_PREFIX_BASH)
     message(FATAL_ERROR "cygpath could not translate the ImageMagick install prefix")
   endif()
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${CODEC_PREFIX}"
+    OUTPUT_VARIABLE CODEC_PREFIX_BASH OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_CODEC_PREFIX_RESULT)
+  if(NOT IM_CYGPATH_CODEC_PREFIX_RESULT EQUAL 0 OR NOT CODEC_PREFIX_BASH)
+    message(FATAL_ERROR "cygpath could not translate the codec prefix")
+  endif()
+  set(IM_PKG_CONFIG_NATIVE "${IM_BUILD}/pkg-config-codecs")
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${IM_PKG_CONFIG_NATIVE}"
+    OUTPUT_VARIABLE IM_PKG_CONFIG OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_PKG_RESULT)
+  if(NOT IM_CYGPATH_PKG_RESULT EQUAL 0 OR NOT IM_PKG_CONFIG)
+    message(FATAL_ERROR "cygpath could not translate the static codec pkg-config bridge")
+  endif()
   set(IM_CONFIGURE_COMMAND "${IM_BASH_COMMAND}" "${IM_CONFIGURE_SCRIPT}")
 else()
   set(IM_MAKE_COMMAND make)
   set(IM_CONFIGURE_COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/configure")
+  find_program(IM_PKG_CONFIG NAMES pkg-config pkgconf REQUIRED)
 endif()
-find_program(PKG_CONFIG_EXECUTABLE NAMES pkg-config pkgconf REQUIRED)
 set(IM_CONFIG_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/deps.lock"
   "${CMAKE_SYSTEM_NAME}|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID}|${CMAKE_CXX_COMPILER_ID}"
@@ -139,38 +152,32 @@ if(WIN32)
   set(IM_CPPFLAGS "-I${CODEC_INCLUDE_BASH}")
   set(IM_LDFLAGS "-L${CODEC_LIB_BASH}")
   set(IM_LIBS "-L${CODEC_LIB_BASH} -lsharpyuv")
-  # Native pkg-config on the Windows runner does not consistently resolve
-  # transitive Requires.private entries from a Git Bash environment. These
-  # explicit overrides retain the same pinned static closure while allowing
-  # ImageMagick's Autoconf probes to link each promised delegate directly.
-  set(IM_CODEC_ENV
-    "ZLIB_CFLAGS=-I${CODEC_INCLUDE_BASH}"
-    "ZLIB_LIBS=-L${CODEC_LIB_BASH} -lz"
-    "PNG_CFLAGS=-I${CODEC_INCLUDE_BASH}/libpng16"
-    "PNG_LIBS=-L${CODEC_LIB_BASH} -lpng16 -lz"
-    "JPEG_CFLAGS=-I${CODEC_INCLUDE_BASH}"
-    "JPEG_LIBS=-L${CODEC_LIB_BASH} -ljpeg"
-    "TIFF_CFLAGS=-I${CODEC_INCLUDE_BASH}"
-    "TIFF_LIBS=-L${CODEC_LIB_BASH} -ltiff -ljpeg -lz"
-    "WEBP_CFLAGS=-I${CODEC_INCLUDE_BASH} -I${CODEC_INCLUDE_BASH}/webp"
-    "WEBP_LIBS=-L${CODEC_LIB_BASH} -lwebp -lsharpyuv"
-    "WEBPMUX_CFLAGS=-I${CODEC_INCLUDE_BASH} -I${CODEC_INCLUDE_BASH}/webp"
-    "WEBPMUX_LIBS=-L${CODEC_LIB_BASH} -lwebpmux -lwebpdemux -lwebp -lsharpyuv")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/static-codec-pkg-config.sh.in"
+    "${IM_PKG_CONFIG_NATIVE}" @ONLY)
+  file(CHMOD "${IM_PKG_CONFIG_NATIVE}"
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE
+    WORLD_READ WORLD_EXECUTE)
+  foreach(codec_query IN ITEMS "zlib >= 1.0.0" "libpng >= 1.0.0"
+      "libjpeg >= 1.0.0" "libtiff-4 >= 4.0.0" "libwebp >= 0.4.1")
+    execute_process(COMMAND "${IM_PKG_CONFIG}" --exists "${codec_query}"
+      RESULT_VARIABLE CODEC_QUERY_RESULT ERROR_VARIABLE CODEC_QUERY_ERROR)
+    if(NOT CODEC_QUERY_RESULT EQUAL 0)
+      message(FATAL_ERROR "static codec pkg-config bridge rejected '${codec_query}': ${CODEC_QUERY_ERROR}")
+    endif()
+  endforeach()
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX_BASH}")
 else()
   set(IM_CPPFLAGS "-I${CODEC_PREFIX}/include")
   set(IM_LDFLAGS "-L${CODEC_PREFIX}/lib")
   set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
-  set(IM_CODEC_ENV)
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
 endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
-    ${IM_CODEC_ENV}
     "CPPFLAGS=${IM_CPPFLAGS}"
     "LDFLAGS=${IM_LDFLAGS}"
     "LIBS=${IM_LIBS}"
-    "PKG_CONFIG=${PKG_CONFIG_EXECUTABLE}"
+    "PKG_CONFIG=${IM_PKG_CONFIG}"
     "PKG_CONFIG_PATH=${CODEC_PKGCONFIG_DIR}"
     "PKG_CONFIG_LIBDIR=${CODEC_PKGCONFIG_DIR}"
     ${IM_CONFIGURE_COMMAND}

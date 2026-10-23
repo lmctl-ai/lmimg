@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Windows Autoconf adapter for the pinned, already-built static codec closure.
+# Versions come from the codecs' installed metadata; native compilation/link
+# probes still decide whether ImageMagick can actually use each codec.
+set -euo pipefail
+codec_prefix='@CODEC_PREFIX_BASH@'
+codec_include='@CODEC_INCLUDE_BASH@'
+codec_lib='@CODEC_LIB_BASH@'
+version_le() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$1" ]; }
+case "${1:-}" in
+  --atleast-pkgconfig-version) version_le "${2:?missing version}" 1.0.0; exit $?;;
+  --atleast-pkgconfig-version=*) version_le "${1#*=}" 1.0.0; exit $?;;
+esac
+want_cflags=0; want_libs=0; want_version=0
+queries=()
+for arg in "$@"; do
+  case "$arg" in
+    --version) printf '1.0.0\n'; exit 0;;
+
+    --cflags) want_cflags=1;;
+    --libs) want_libs=1;;
+    --modversion) want_version=1;;
+    --static|--exists|--print-errors|--short-errors|--silence-errors|--errors-to-stdout) ;;
+    --*) echo "unsupported static codec query: $arg" >&2; exit 1;;
+    *) read -r -a words <<< "$arg"; queries+=("${words[@]}");;
+  esac
+done
+module_version() {
+  local file="$codec_prefix/lib/pkgconfig/$1.pc"
+  if [ ! -f "$file" ]; then file="$codec_prefix/share/pkgconfig/$1.pc"; fi
+  [ -f "$file" ] || return 1
+  awk '/^Version:/{sub(/^Version:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$file"
+}
+
+flags=""; versions=()
+for ((i=0; i<${#queries[@]}; i++)); do
+  module="${queries[i]}"
+  case "$module" in
+    zlib) libs='-lz';;
+    libpng|libpng16) libs='-lpng16 -lz -lm';;
+    libjpeg) libs='-ljpeg';;
+    libtiff-4) libs='-ltiff -ljpeg -lwebp -lsharpyuv -lz -lm';;
+    libwebp|libwebpdecoder) libs='-lwebp -lsharpyuv -lm';;
+    libwebpmux|libwebpdemux) libs='-lwebpmux -lwebpdemux -lwebp -lsharpyuv -lm';;
+    libsharpyuv) libs='-lsharpyuv -lm';;
+    *) echo "codec not in pinned closure: $module" >&2; exit 1;;
+  esac
+  version="$(module_version "$module")" || exit 1
+  [ -n "$version" ] || exit 1
+  versions+=("$version")
+  if ((i+1 < ${#queries[@]})); then
+    op="${queries[i+1]}"
+    case "$op" in
+      '>='|'>'|'<='|'<'|'='|'==')
+        ((i+2 < ${#queries[@]})) || exit 1
+        required="${queries[i+2]}"
+        case "$op" in
+          '>=') version_le "$required" "$version" || exit 1;;
+          '>') [ "$version" != "$required" ] && version_le "$required" "$version" || exit 1;;
+          '<=') version_le "$version" "$required" || exit 1;;
+          '<') [ "$version" != "$required" ] && version_le "$version" "$required" || exit 1;;
+          '='|'==') [ "$version" = "$required" ] || exit 1;;
+        esac
+        i=$((i+2));;
+    esac
+  fi
+  flags="$flags $libs"
+done
+((${#versions[@]} > 0)) || exit 1
+if ((want_version)); then printf '%s\n' "${versions[@]}"; exit 0; fi
+result=""
+if ((want_cflags)); then result="-I$codec_include -I$codec_include/libpng16"; fi
+if ((want_libs)); then result="$result -L$codec_lib$flags"; fi
+[ -z "$result" ] || printf '%s\n' "$result"
