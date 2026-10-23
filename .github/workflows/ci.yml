@@ -135,6 +135,7 @@ jobs:
           name: diagnostics-${{ matrix.name }}
           path: |
             build/imagemagick-build/config.log
+            build/lmimg-build.log
             build/**/CMakeConfigureLog.yaml
           if-no-files-found: ignore
 

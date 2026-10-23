@@ -32,7 +32,7 @@ GEN=""; if [ ! -f "$BUILD_DIR/CMakeCache.txt" ] && command -v ninja >/dev/null 2
  fi
  fail configure
 }
-"$TIMEOUT" 600 cmake --build "$BUILD_DIR" --parallel "${BUILD_JOBS:-4}" >"$WORK/build.log" 2>&1 || { tail -70 "$WORK/build.log"; fail build; }
+"$TIMEOUT" 600 cmake --build "$BUILD_DIR" --parallel "${BUILD_JOBS:-4}" >"$WORK/build.log" 2>&1 || { cp "$WORK/build.log" "$BUILD_DIR/lmimg-build.log"; tail -70 "$WORK/build.log"; fail build; }
 ok "static release build"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
 ok "native pixel, codec and image mathematics oracles"

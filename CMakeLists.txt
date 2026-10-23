@@ -301,6 +301,9 @@ if(UNIX AND NOT APPLE)
   target_link_libraries(lmimg_magick INTERFACE m)
 endif()
 if(WIN32)
+  # Its public headers otherwise infer DLL imports from the MinGW CRT flags.
+  # _LIB is ImageMagick's static-consumer switch in method-attribute.h.
+  target_compile_definitions(lmimg_magick INTERFACE _LIB)
   # ImageMagick's MinGW configure probe records these native drawing and
   # window API imports in its static archive closure.
   target_link_libraries(lmimg_magick INTERFACE gdi32 user32)
