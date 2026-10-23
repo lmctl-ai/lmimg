@@ -7,11 +7,18 @@ one.vignette(0.0,0.0).unsharp(1.0,1.0,1.0,0.0).morphology("median",1);
 img.assert_true(one.pixel(0,0,0)>=0.0 && one.pixel(0,0,0)<=1.0);
 let base=img.canvas(1,1,0.2,0.4,0.6,1.0);
 let top=img.canvas(1,1,0.6,0.3,0.2,1.0);
-let modes=["overlay","difference","darken","lighten","addition","subtract"];
-for (mode in modes) {
-  let sample=base.copy().blend(top,mode,1.0,0,0);
-  img.assert_true(sample.pixel(0,0,0)>=0.0 && sample.pixel(0,0,0)<=1.0);
-}
+let overlay=base.copy().blend(top,"overlay",1.0,0,0);
+let difference=base.copy().blend(top,"difference",1.0,0,0);
+let darken=base.copy().blend(top,"darken",1.0,0,0);
+let lighten=base.copy().blend(top,"lighten",1.0,0,0);
+let addition=base.copy().blend(top,"addition",1.0,0,0);
+let subtract=base.copy().blend(top,"subtract",1.0,0,0);
+img.assert_true(overlay.pixel(0,0,0)>=0.0 && overlay.pixel(0,0,0)<=1.0);
+img.assert_true(difference.pixel(0,0,0)>=0.0 && difference.pixel(0,0,0)<=1.0);
+img.assert_true(darken.pixel(0,0,0)>=0.0 && darken.pixel(0,0,0)<=1.0);
+img.assert_true(lighten.pixel(0,0,0)>=0.0 && lighten.pixel(0,0,0)<=1.0);
+img.assert_true(addition.pixel(0,0,0)>=0.0 && addition.pixel(0,0,0)<=1.0);
+img.assert_true(subtract.pixel(0,0,0)>=0.0 && subtract.pixel(0,0,0)<=1.0);
 let layers=img.layers(1,1).add(top,"overlay",1.0,0,0).render();
 img.assert_close(layers.pixel(0,0,0),0.24,0.01);
 end _dsl_
