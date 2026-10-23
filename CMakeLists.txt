@@ -138,7 +138,7 @@ endif()
 set(IM_CONFIG_INPUTS
   "${CMAKE_CURRENT_SOURCE_DIR}/deps.lock"
   "${CMAKE_SYSTEM_NAME}|${CMAKE_SYSTEM_PROCESSOR}|${CMAKE_C_COMPILER_ID}|${CMAKE_CXX_COMPILER_ID}"
-  "${CODEC_PKGCONFIG_DIR}|MAGICKCORE_HDRI_ENABLE=0|MAGICKCORE_QUANTUM_DEPTH=8|MAGICKCORE_CHANNEL_MASK_DEPTH=32|static-pkgconfig-v2|sharpyuv")
+  "${CODEC_PKGCONFIG_DIR}|MAGICKCORE_HDRI_ENABLE=0|MAGICKCORE_QUANTUM_DEPTH=8|MAGICKCORE_CHANNEL_MASK_DEPTH=32|static-pkgconfig-v2|sharpyuv|mingw-stat-local-v1")
 string(SHA256 IM_CONFIG_KEY "${IM_CONFIG_INPUTS}")
 set(IM_NEEDS_CONFIGURE TRUE)
 if(EXISTS "${IM_CONFIGURED}")
@@ -164,20 +164,12 @@ if(WIN32)
   # the MinGW CRT declaration. Include sys/stat.h first, then select the
   # matching wide 64-bit entry point for NTStatWide without editing the pinned
   # ImageMagick checkout.
-  set(IM_MINGW_STAT_SHIM_NATIVE "${CMAKE_BINARY_DIR}/generated/mingw-stat-compat.h")
-  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
-  file(WRITE "${IM_MINGW_STAT_SHIM_NATIVE}"
+  # Autoconf and its flat Automake build both compile from IM_BUILD. A
+  # relative forced-include avoids MSYS rewriting a joined drive-path flag
+  # (for example -includeD:/a/... became the invalid D:A:/...).
+  file(WRITE "${IM_BUILD}/mingw-stat-compat.h"
     "#include <sys/stat.h>\n#if defined(__MINGW32__)\n#define wstat _wstat64\n#endif\n")
-  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${IM_MINGW_STAT_SHIM_NATIVE}"
-    OUTPUT_VARIABLE IM_MINGW_STAT_SHIM OUTPUT_STRIP_TRAILING_WHITESPACE
-    RESULT_VARIABLE IM_CYGPATH_SHIM_RESULT)
-  if(NOT IM_CYGPATH_SHIM_RESULT EQUAL 0 OR NOT IM_MINGW_STAT_SHIM)
-    message(FATAL_ERROR "cygpath could not translate the MinGW stat compatibility shim")
-  endif()
-  # This flag is consumed by the native MinGW compiler. Keep its native
-  # forward-slash drive path; a /d/... MSYS path is not a valid include path
-  # when the compiler is launched from Autoconf.
-  set(IM_CFLAGS "-include${IM_MINGW_STAT_SHIM_NATIVE}")
+  set(IM_CFLAGS "-include mingw-stat-compat.h")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/static-codec-pkg-config.sh.in"
     "${IM_PKG_CONFIG_NATIVE}" @ONLY)
   file(CHMOD "${IM_PKG_CONFIG_NATIVE}"

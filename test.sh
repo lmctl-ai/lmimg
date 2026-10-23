@@ -28,7 +28,7 @@ GEN=""; if [ ! -f "$BUILD_DIR/CMakeCache.txt" ] && command -v ninja >/dev/null 2
 "$TIMEOUT" 1800 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >"$WORK/configure.log" 2>&1 || {
  tail -70 "$WORK/configure.log"
  if [ -f "$BUILD_DIR/imagemagick-build/config.log" ]; then
-  grep -B20 -A5 'C compiler cannot create executables' "$BUILD_DIR/imagemagick-build/config.log" || true
+  grep -B45 -A5 'C compiler cannot create executables' "$BUILD_DIR/imagemagick-build/config.log" || true
  fi
  fail configure
 }
