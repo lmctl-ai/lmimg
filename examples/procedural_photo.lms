@@ -1,0 +1,23 @@
+out = ARGV.len() > 0 ? ARGV[0] : "procedural_photo.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let scene = img.pattern(420, 480, "0.10 + 0.16*y", "0.20 + 0.28*y", "0.42 + 0.28*y", "1");
+scene.circle(320.0, 112.0, 58.0, 1.0, 0.78, 0.34, 1.0);
+scene.circle(320.0, 112.0, 42.0, 1.0, 0.91, 0.58, 1.0);
+scene.line(0.0, 326.0, 420.0, 262.0, 0.10, 0.15, 0.22, 1.0, 3.0);
+scene.circle(78.0, 334.0, 74.0, 0.05, 0.24, 0.20, 1.0);
+scene.circle(208.0, 342.0, 104.0, 0.04, 0.18, 0.18, 1.0);
+scene.circle(350.0, 350.0, 86.0, 0.07, 0.27, 0.21, 1.0);
+scene.rect(170.0, 278.0, 76.0, 130.0, 0.12, 0.08, 0.06, 1.0);
+scene.rect(184.0, 300.0, 48.0, 108.0, 0.34, 0.20, 0.12, 1.0);
+let graded = scene.copy().blur(1.5, 1.2).sepia(22.0);
+scene.text(18.0, 34.0, "PROCEDURAL SCENE", 20.0, 1.0, 1.0, 1.0, 1.0);
+graded.text(18.0, 34.0, "PHOTO-STYLE GRADE", 20.0, 1.0, 0.94, 0.78, 1.0);
+let im = img.panel(scene, graded, 20);
+im.resize(900, 520);
+im.save("images/procedural_photo.png");
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/procedural_photo.png");

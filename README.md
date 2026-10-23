@@ -2,11 +2,12 @@
 
 Image editing, compositing, and procedural graphics from scripts.
 
-| A gradient becomes a poster | Light, pigment, and transparency |
-| --- | --- |
-| ![Procedural gradient with an annotated color study](docs/images/gradient_studio.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | ![Original and screen blend](docs/images/blend_modes.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` |
-| ![Original and graded tones](docs/images/levels_lab.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` | ![Original and sepia print treatment](docs/images/sepia_poster.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` |
-| ![Gaussian blur softens geometric boundaries](docs/images/blur_reveal.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` | ![Edges extracted from a synthetic geometric scene](docs/images/edge_map.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
+| Procedural color | Screen composite | Tonal recovery | Warm print |
+| --- | --- | --- | --- |
+| ![Procedural gradient](docs/images/gradient_studio.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | ![Screen blend](docs/images/blend_modes.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` | ![Recovered contrast](docs/images/levels_lab.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` | ![Sepia print](docs/images/sepia_poster.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` |
+| ![Blurred geometry](docs/images/blur_reveal.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` | ![Edge map](docs/images/edge_map.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` | ![Procedural thumbnails](docs/images/thumbnail_grid.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` | ![Moving color wave](docs/images/animation_wave.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
+| ![Procedural photo style pipeline](docs/images/procedural_photo.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` | ![Watermarked procedural artwork](docs/images/watermark_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` | ![Batch resize outputs](docs/images/batch_resize.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` | ![Before and after panels](docs/images/before_after_panels.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
+| ![Four-up contact sheet](docs/images/contact_sheet_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` | ![Animated color wave](docs/images/animation_wave.gif)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |  |  |
 
 Install [lmctl](https://github.com/lmctl-ai/lmctl), then copy any caption above into a terminal. Each script installs its bound host as needed and writes `images/<example>.png` in the current directory. Inputs are generated in the script; no photographs or additional files are required.
 
@@ -35,14 +36,16 @@ All image edits mutate their receiver and return it for chaining. Use `copy()` b
 | --- | --- |
 | Create / load | `img.canvas(w,h,r,g,b,a)`, `img.pattern(w,h,R,G,B,A)`, `img.open(path)` |
 | Copy / save | `image.copy()`, `image.save(path)` |
+| Inspect / edit pixels | `width()`, `height()`, `pixel(x,y,channel)`, `set_pixel(x,y,r,g,b,a)` |
 | Geometry | `resize`, `crop`, `rotate`, `flip`, `perspective`, `lens` |
 | Color | `levels`, `curves`, `hsl`, `channelmix`, `grayscale`, `sepia` |
 | Filters | `blur`, `sharpen`, `edges`, `morphology`, `unsharp`, `vignette`, `tilt_shift` |
-| Compositing | `blend`, masks, selections, layers with per-layer opacity |
+| Compositing | `blend`, `mask`, rectangular `selection`, layers with per-layer opacity |
+| Repair / builders | `heal`, `img.curve().point(x,y)`, `img.layers(w,h)`, `img.montage()` |
 | Drawing | `rect`, `circle`, `line`, `text` with an embedded font |
 | Measurements | `pixel`, `mean`, `stddev`, `min`, `max`, `histogram`, `psnr`, `ssim` |
 | Contact sheets / GIF | `img.panel(a,b,gap)`, `img.animation().add(frame,delay).save(path)` |
-| Metadata | `metadata(key,value)`, `property(key)` |
+| Utilities | `img.eval(expression)`, `img.assert_true`, `img.assert_close`, `metadata(key,value)`, `property(key)` |
 
 `lmimg --dsl-signatures` lists exact parameter types and overloads; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM are supported local raster formats. Animated output is GIF; delays are centiseconds. `open` reads the first frame of an animated input. Text supports ASCII through the embedded Roboto font. Comparison requires equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM uses one global luma window with sample covariance and constants 0.01² and 0.03²; it is a compact image statistic rather than a multiscale perceptual model.
 
@@ -58,6 +61,11 @@ All image edits mutate their receiver and return it for chaining. Use `copy()` b
 | Finding boundaries | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` |
 | A contact sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` |
 | A moving color wave | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
+| A procedural photo-style grade | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` |
+| Watermarking an original study | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` |
+| Batch resizing three deliverables | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` |
+| Before and after delivery panels | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
+| A four-up contact sheet | `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` |
 
 ![A procedural color wave](docs/images/animation_wave.gif)
 

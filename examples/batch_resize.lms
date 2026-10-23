@@ -1,0 +1,19 @@
+out = ARGV.len() > 0 ? ARGV[0] : "batch_resize.dslb";
+mkdir("images");
+p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let source = img.pattern(280, 340, "0.12 + 0.52*x", "0.18 + 0.46*y", "0.72 - 0.34*x", "1");
+source.circle(140.0, 170.0, 78.0, 0.96, 0.72, 0.24, 1.0);
+source.rect(50.0, 248.0, 180.0, 28.0, 0.12, 0.20, 0.48, 1.0);
+let small = source.copy().resize(180, 220);
+let medium = source.copy().resize(280, 340);
+let large = source.copy().resize(380, 460);
+let pair = img.panel(small, medium, 18);
+let triptych = img.panel(pair, large, 18);
+triptych.resize(900, 520);
+triptych.save("images/batch_resize.png");
+img.assert_true(triptych.width() == 900);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/batch_resize.png");
