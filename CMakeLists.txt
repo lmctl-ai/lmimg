@@ -159,7 +159,7 @@ if(WIN32)
     WORLD_READ WORLD_EXECUTE)
   foreach(codec_query IN ITEMS "zlib >= 1.0.0" "libpng >= 1.0.0"
       "libjpeg >= 1.0.0" "libtiff-4 >= 4.0.0" "libwebp >= 0.4.1")
-    execute_process(COMMAND "${IM_PKG_CONFIG}" --exists "${codec_query}"
+    execute_process(COMMAND "${IM_BASH_COMMAND}" "${IM_PKG_CONFIG}" --exists "${codec_query}"
       RESULT_VARIABLE CODEC_QUERY_RESULT ERROR_VARIABLE CODEC_QUERY_ERROR)
     if(NOT CODEC_QUERY_RESULT EQUAL 0)
       message(FATAL_ERROR "static codec pkg-config bridge rejected '${codec_query}': ${CODEC_QUERY_ERROR}")
