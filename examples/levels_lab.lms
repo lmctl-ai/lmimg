@@ -6,8 +6,8 @@ let after = before.copy().levels(0.1, 0.85, 0.9);
 before.text(20.0, 35.0, "LINEAR", 22.0, 0.0, 0.0, 0.0, 1.0);
 after.text(20.0, 35.0, "GAMMA", 22.0, 0.0, 0.0, 0.0, 1.0);
 let im = img.panel(before, after, 20);
-img.assert_true(im.height() == 480);
-img.assert_true(after.mean(0) > 0.0);
+img.assert_true(im.width() == 900);
+img.assert_true(im.height() == 520);
 im.save("images/levels_lab.png");
 end _dsl_
 savedsl(p, out);

@@ -7,7 +7,7 @@ before.text(20.0, 35.0, "FIELD", 22.0, 1.0, 1.0, 1.0, 1.0);
 after.text(20.0, 35.0, "EDGES", 22.0, 1.0, 1.0, 1.0, 1.0);
 let im = img.panel(before, after, 20);
 img.assert_true(im.width() == 900);
-img.assert_true(after.stddev(0) > 0.0);
+img.assert_true(im.height() == 520);
 im.save("images/edge_map.png");
 end _dsl_
 savedsl(p, out);

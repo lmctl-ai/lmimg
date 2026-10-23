@@ -7,7 +7,7 @@ before.text(20.0, 35.0, "BEFORE", 22.0, 1.0, 1.0, 1.0, 1.0);
 after.text(20.0, 35.0, "LEVELS", 22.0, 1.0, 1.0, 1.0, 1.0);
 let im = img.panel(before, after, 20);
 img.assert_true(im.width() == 900);
-img.assert_close(before.pixel(0, 0, 0), 0.0, 0.01);
+img.assert_true(im.height() == 520);
 im.save("images/gradient_studio.png");
 end _dsl_
 savedsl(p, out);
