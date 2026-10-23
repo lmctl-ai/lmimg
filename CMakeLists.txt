@@ -180,6 +180,17 @@ else()
   set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
 endif()
+if(WIN32 AND DEFINED LMIMG_MSYS2_USR_BIN)
+  # Keep Autoconf, expr, sed, make, and the shell in one MSYS2 installation.
+  # Git Bash utilities earlier on PATH can otherwise change Autoconf's option
+  # parsing while the configure script is running under MSYS2 bash.
+  set(ENV{PATH} "${LMIMG_MSYS2_USR_BIN};$ENV{PATH}")
+  set(ENV{CONFIG_SHELL} "${IM_BASH_COMMAND}")
+  set(ENV{SHELL} "${IM_BASH_COMMAND}")
+  set(ENV{CC} "${CMAKE_C_COMPILER}")
+  set(ENV{CXX} "${CMAKE_CXX_COMPILER}")
+  message(STATUS "Windows ImageMagick POSIX tools: ${LMIMG_MSYS2_USR_BIN}")
+endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
     "CPPFLAGS=${IM_CPPFLAGS}"
