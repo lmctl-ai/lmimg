@@ -139,15 +139,34 @@ if(WIN32)
   set(IM_CPPFLAGS "-I${CODEC_INCLUDE_BASH}")
   set(IM_LDFLAGS "-L${CODEC_LIB_BASH}")
   set(IM_LIBS "-L${CODEC_LIB_BASH} -lsharpyuv")
+  # Native pkg-config on the Windows runner does not consistently resolve
+  # transitive Requires.private entries from a Git Bash environment. These
+  # explicit overrides retain the same pinned static closure while allowing
+  # ImageMagick's Autoconf probes to link each promised delegate directly.
+  set(IM_CODEC_ENV
+    "ZLIB_CFLAGS=-I${CODEC_INCLUDE_BASH}"
+    "ZLIB_LIBS=-L${CODEC_LIB_BASH} -lz"
+    "PNG_CFLAGS=-I${CODEC_INCLUDE_BASH}/libpng16"
+    "PNG_LIBS=-L${CODEC_LIB_BASH} -lpng16 -lz"
+    "JPEG_CFLAGS=-I${CODEC_INCLUDE_BASH}"
+    "JPEG_LIBS=-L${CODEC_LIB_BASH} -ljpeg"
+    "TIFF_CFLAGS=-I${CODEC_INCLUDE_BASH}"
+    "TIFF_LIBS=-L${CODEC_LIB_BASH} -ltiff -ljpeg -lz"
+    "WEBP_CFLAGS=-I${CODEC_INCLUDE_BASH} -I${CODEC_INCLUDE_BASH}/webp"
+    "WEBP_LIBS=-L${CODEC_LIB_BASH} -lwebp -lsharpyuv"
+    "WEBPMUX_CFLAGS=-I${CODEC_INCLUDE_BASH} -I${CODEC_INCLUDE_BASH}/webp"
+    "WEBPMUX_LIBS=-L${CODEC_LIB_BASH} -lwebpmux -lwebpdemux -lwebp -lsharpyuv")
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX_BASH}")
 else()
   set(IM_CPPFLAGS "-I${CODEC_PREFIX}/include")
   set(IM_LDFLAGS "-L${CODEC_PREFIX}/lib")
   set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
+  set(IM_CODEC_ENV)
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
 endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
+    ${IM_CODEC_ENV}
     "CPPFLAGS=${IM_CPPFLAGS}"
     "LDFLAGS=${IM_LDFLAGS}"
     "LIBS=${IM_LIBS}"
