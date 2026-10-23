@@ -96,6 +96,18 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-binutils
 
+      - name: select the matching native MSYS2 compiler (windows)
+        if: runner.os == 'Windows' && env.ONLY_OK == 'true'
+        shell: bash
+        env:
+          LMIMG_MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          msys2_root_posix="$(cygpath -u "$LMIMG_MSYS2_ROOT")"
+          msys2_root_win="$(cygpath -w "$msys2_root_posix/mingw64")"
+          test -x "$msys2_root_posix/mingw64/bin/gcc.exe" || { echo "MSYS2 MinGW64 gcc missing"; exit 1; }
+          echo "CC=$msys2_root_win/bin/gcc.exe" >> "$GITHUB_ENV"
+          echo "CXX=$msys2_root_win/bin/g++.exe" >> "$GITHUB_ENV"
+
       - name: lmscript compiler (npm @lmctl-ai/lmctl, DSL v5)
         if: env.ONLY_OK == 'true'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
