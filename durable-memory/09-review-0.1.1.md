@@ -3,7 +3,7 @@
 
 The original independent review remains in the simulation workspace. Review took place during the
 v0.1.0 build; disposition below is against the completed release and v0.1.1
-changes. Final verification/release evidence will be appended after CI.
+changes. Final verification completed: v0.1.1 is released with exactly five assets and green main/tagged five-platform CI.
 
 | Finding | Disposition and reason | Regression in test.sh |
 | --- | --- | --- |
@@ -26,3 +26,18 @@ changes. Final verification/release evidence will be appended after CI.
 Gallery expanded from eight to thirteen captioned PNG examples plus GIF, including
 a shaded procedural photo-style grade, aspect-preserving batch outputs, watermark,
 contact-sheet variants and before/after delivery panels.
+
+### Final verification
+
+- Release: https://github.com/lmctl-ai/lmimg/releases/tag/v0.1.1 (exactly five executable assets).
+- Main CI: https://github.com/lmctl-ai/lmimg/actions/runs/40017099712 — all five green.
+- Tagged CI/release: https://github.com/lmctl-ai/lmimg/actions/runs/40019405293 — all five builds and publication green.
+- Local complete network-enabled test.sh: 31 groups, 107 native checks, 16 DSL programs; final measured run 24.66 seconds, peak RSS 2,120,044 KiB. macOS/Windows run 30 groups because the extra default-budget virtual-limit check is Linux-only.
+- Every one of the 13 raw public URLs passed in a separate empty directory with no lmimg on PATH. A new private cache installed v0.1.1; cached/downloaded Linux SHA-256 both equal `234427c9e488ab1fac5892f82f52abd9c27de09ece2303adf1e2490f58ac19ec`.
+- Thirteen PNGs plus the GIF match committed images byte for byte; batch output files preserve 180×240, 210×280 and 240×320 sizes.
+- Downloaded release also passes review_image.lms (including center=1 for the one-row focus repro) and all four malformed VM loop fixtures. Embedded notices match the source exactly.
+- CI retains compiler 0.2.369 and uses an isolated lmctl 0.2.401 for autorun, because the older CLI predates that command.
+
+No review implementation/release work remains. M3/m6 scope boundaries and m11's
+existing distribution policy remain explicitly documented rather than claimed as
+new functionality or a new legal determination.

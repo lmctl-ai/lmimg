@@ -12,7 +12,7 @@ Image editing, compositing, and procedural graphics from scripts.
 | ![Batch resize outputs](docs/images/batch_resize.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` | ![Before and after panels](docs/images/before_after_panels.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
 | ![Four-up contact sheet](docs/images/contact_sheet_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` | ![Animated color wave](docs/images/animation_wave.gif)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
 
-Install [lmctl](https://github.com/lmctl-ai/lmctl), then copy any caption above into a terminal. Each script installs its bound host as needed and writes `images/<example>.png` in the current directory. Inputs are generated in the script; no photographs or additional files are required.
+Install an autorun-capable [lmctl](https://github.com/lmctl-ai/lmctl) (verified with 0.2.401), then copy any caption above into a terminal. Each script installs its bound host as needed and writes `images/<example>.png` in the current directory. Inputs are generated in the script; no photographs or additional files are required.
 
 ```sh
 lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms

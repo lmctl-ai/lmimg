@@ -6,7 +6,7 @@ the host, and the native oracle executable. Roboto bytes and stb_truetype are
 embedded at build time. No font or kernel/data file is required at runtime.
 
 Local Linux v0.1.1 verification on 2026-10-23: all 31 test groups passed in
-23.64 seconds with peak resident memory 2,119,992 KiB. This was a complete
+24.66 seconds with peak resident memory 2,120,044 KiB. This was a complete
 build/test invocation reusing already-built static dependency archives, with the
 public network autorun check enabled. CI additionally rebuilds from pinned source.
 The native suite has 107 active runtime assertions (not C assert macros), including

@@ -4,9 +4,10 @@ The workflow builds Linux x64 and arm64, macOS arm64 and x64, and Windows x64.
 The compiler is npm `@lmctl-ai/lmctl@0.2.369`. Each job runs the complete test.sh
 suite and packages a raw executable plus LICENSE and THIRD_PARTY_NOTICES.
 
-Main must pass all five jobs before tagging v0.1.0. The tag workflow repeats all
-five builds, checks that the Linux binary reports exactly `lmimg 0.1.0`, and
-publishes the five platform executables with the two license files.
+Main must pass all five jobs before tagging a release. The tag workflow repeats
+all five builds and checks the Linux binary version against the tag. v0.1.0
+attached five executables and two license files; v0.1.1 attaches exactly five
+executables, with complete license notices embedded in each binary.
 
 Early CI findings: codec pins must be peeled commit objects rather than annotated
 tag objects. ImageMagick's static WebP closure needs SharpYUV. Private pkg-config
@@ -102,3 +103,59 @@ All gallery assets remain below the PNG/GIF size budgets.
 
 No open implementation or release items remain. The deliberate Q8, ASCII-text,
 first-frame input, and global-SSIM limits are listed in note 08.
+
+
+## v0.1.1 review release — 2026-10-23
+
+Released [v0.1.1](https://github.com/lmctl-ai/lmimg/releases/tag/v0.1.1) from
+`efc0b3f828ddabdda97721f5f9202434e33b8dca` after the independent review.
+
+- [Main CI](https://github.com/lmctl-ai/lmimg/actions/runs/40017099712): all five platform jobs green.
+- [Tagged CI and publication](https://github.com/lmctl-ai/lmimg/actions/runs/40019405293): all five platform jobs and release green.
+- 107 native checks; 16 DSL programs (13 examples plus three regressions); 31 Linux test groups and 30 macOS/Windows groups with live network integration enabled.
+- The reviewed one-row focus/blend/layer script and all four malformed loop bytecodes were also run against the downloaded released Linux executable.
+
+Exactly five executable assets are attached. Complete host/dependency/runtime
+terms, the WebP patent grant and source/build pointers are embedded in
+`--notices`; downloaded Linux output matches THIRD_PARTY_NOTICES byte for byte.
+Both Linux assets are static ELF files, macOS assets are matching Mach-O files,
+and the Windows x64 PE imports only Windows/UCRT DLLs.
+
+| Asset | Bytes | SHA-256 |
+| --- | ---: | --- |
+| lmimg-linux-arm64 | 8942320 | `69999876c1173b552f2abdfcbd5f6918693ff9b97361b69b07e4981d7039d0e9` |
+| lmimg-linux-x64 | 10172144 | `234427c9e488ab1fac5892f82f52abd9c27de09ece2303adf1e2490f58ac19ec` |
+| lmimg-macos-arm64 | 7298200 | `68098987824c84324aec08d1a24dfb71340a409d768a04c17850a459f1af89a5` |
+| lmimg-macos-x64 | 8191504 | `1b02a8b8909ba872301dbb45a782885d6024fa7d7f425a821e501564a6117565` |
+| lmimg-windows-x64.exe | 8732672 | `f406f4d9b5bfdf1d5dce4f1ce7a726a85b0d0619a63ba8b570afee92abfe7424` |
+
+All thirteen raw example URLs below were run with timeout 300 in separate empty
+directories, with neither lmimg nor lmplot on PATH and a freshly created private
+cache. The installed metadata records `v0.1.1`, asset `lmimg-linux-x64`, SHA-256
+`234427c9e488ab1fac5892f82f52abd9c27de09ece2303adf1e2490f58ac19ec`;
+its bytes equal the independently downloaded release and `--version` reports
+exactly `lmimg 0.1.1`.
+
+| Autorun example | Seconds | PNG bytes |
+| --- | ---: | ---: |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/gradient_studio.lms` | 3.37 | 4032 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blend_modes.lms` | 1.23 | 7298 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/levels_lab.lms` | 1.36 | 4272 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/sepia_poster.lms` | 1.23 | 23737 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/blur_reveal.lms` | 1.29 | 21927 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/edge_map.lms` | 1.36 | 14178 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` | 1.19 | 7880 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` | 1.73 | 11771 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/procedural_photo.lms` | 1.71 | 114597 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` | 1.60 | 34251 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/batch_resize.lms` | 1.36 | 29194 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` | 1.63 | 66165 |
+| `lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/contact_sheet_story.lms` | 1.36 | 23949 |
+
+All commands returned 0. All thirteen PNGs and the eight-frame, 80 ms/frame GIF
+match the committed gallery byte for byte. The batch example additionally writes
+180×240, 210×280 and 240×320 PNGs, verified from their file headers.
+
+Review dispositions, including intentionally scoped rectangular selections and
+stable-input requirements, are recorded in note 09. No implementation or release
+work remains for this review follow-up.
