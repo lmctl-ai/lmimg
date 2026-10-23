@@ -85,6 +85,7 @@ jobs:
       - name: POSIX build tools for ImageMagick Autoconf (windows)
         if: runner.os == 'Windows' && env.ONLY_OK == 'true'
         uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2
+        id: msys2
         with:
           msystem: MINGW64
           update: true
@@ -124,6 +125,7 @@ jobs:
         env:
           LMIMG_TEST_NETWORK: "1"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LMIMG_MSYS2_ROOT: ${{ steps.msys2.outputs.msys2-location }}
         run: ./test.sh
 
       - name: package artifact
