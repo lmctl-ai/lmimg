@@ -25,7 +25,13 @@ scripts/sync-deps.sh --verify >/dev/null
 ok "dependencies match every full commit pin"
 GEN=""; if [ ! -f "$BUILD_DIR/CMakeCache.txt" ] && command -v ninja >/dev/null 2>&1; then GEN="-G Ninja"; fi
 # shellcheck disable=SC2086
-"$TIMEOUT" 1800 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >"$WORK/configure.log" 2>&1 || { tail -70 "$WORK/configure.log"; fail configure; }
+"$TIMEOUT" 1800 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >"$WORK/configure.log" 2>&1 || {
+ tail -70 "$WORK/configure.log"
+ if [ -f "$BUILD_DIR/imagemagick-build/config.log" ]; then
+  grep -B20 -A5 'C compiler cannot create executables' "$BUILD_DIR/imagemagick-build/config.log" || true
+ fi
+ fail configure
+}
 "$TIMEOUT" 600 cmake --build "$BUILD_DIR" --parallel "${BUILD_JOBS:-4}" >"$WORK/build.log" 2>&1 || { tail -70 "$WORK/build.log"; fail build; }
 ok "static release build"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
