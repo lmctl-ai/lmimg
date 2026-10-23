@@ -677,6 +677,7 @@ Image &Image::vignette(double radius, double sigma) {
   });
 }
 Image &Image::tilt_shift(double radius, double a, double b) {
+  kernel_peak(radius, radius);
   if (!std::isfinite(radius) || !std::isfinite(a) || !std::isfinite(b) ||
       radius < 0 || a < 0 || b < a || b > 1)
     throw std::invalid_argument("tilt shift focus range");

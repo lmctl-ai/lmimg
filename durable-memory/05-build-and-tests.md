@@ -11,7 +11,7 @@ The final native suite has 92 active runtime assertions, including the last rota
 quantized pixels, geometry, masks/selections, HSL/channel mixing/curves, morphology,
 healing, text colors, alpha preservation, over/multiply/screen, statistics,
 closed-form PSNR/SSIM, seven raster codec round trips, and GIF frame timing.
-Ten DSL programs compile and run: two regressions and eight examples. Fourteen
+Ten DSL programs compile and run: two regressions and eight examples. Fifteen
 error snippets must return exit 3, JSON, and exactly one stderr diagnostic.
 
 The suite additionally verifies dependency commit objects and clean checkouts,

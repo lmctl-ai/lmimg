@@ -91,7 +91,8 @@ expect_error perspective 'let a=img.canvas(2,2,1.0,1.0,1.0,1.0); a.perspective(0
 expect_error format 'let im=img.open("not-supported.svg");' 'format'
 expect_error opacity 'let a=img.canvas(2,2,1.0,1.0,1.0,1.0); a.blend(a,"over",2.0,0,0);' 'opacity'
 expect_error nonfinite 'let a=img.pattern(2,2,"sqrt(-1)","0","0","1");' 'finite'
-ok "fourteen error paths report exit 3, JSON and one stderr diagnostic"
+expect_error tilt_kernel 'let a=img.canvas(2,2,1.0,0.0,0.0,1.0); a.tilt_shift(img.eval("1e308"),0.25,0.75);' 'radius'
+ok "fifteen error paths report exit 3, JSON and one stderr diagnostic"
 compile_snippet runaway 'for (i in range(0,1000000)) { let im=img.canvas(1024,1024,0.0,0.0,0.0,1.0); }'
 set +e
 LMIMG_MAX_MEMORY_MB=64 "$TIMEOUT" 90 "$HOST" --dsl "$WORK/runaway.dslb" >"$WORK/memory.out" 2>"$WORK/memory.err"; code=$?

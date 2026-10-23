@@ -16,13 +16,12 @@ endif()
 # at these static archives through pkg-config; no host codec or runtime module
 # is used by the resulting executable.
 set(CODEC_PREFIX "${CMAKE_BINARY_DIR}/codec-prefix")
-set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig")
-if(EXISTS "${CODEC_PREFIX}/share/pkgconfig")
-  if(WIN32)
-    set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig;${CODEC_PREFIX}/share/pkgconfig")
-  else()
-    set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig:${CODEC_PREFIX}/share/pkgconfig")
-  endif()
+# Include zlib's future install location even on a completely clean build.
+# Testing EXISTS here runs before zlib is installed and silently omits it in CI.
+if(WIN32)
+  set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig;${CODEC_PREFIX}/share/pkgconfig")
+else()
+  set(CODEC_PKGCONFIG_DIR "${CODEC_PREFIX}/lib/pkgconfig:${CODEC_PREFIX}/share/pkgconfig")
 endif()
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/codec-build")
 function(build_codec name source opts)
@@ -83,8 +82,7 @@ file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/generated/embedded_font.hpp"
 
 # ImageMagick's supported build is Autoconf rather than CMake.  Configure it
 # once into the build tree, with Q8/no-HDRI pixels and no loadable modules.
-# Delegate libraries remain optional and are discovered by ImageMagick itself;
-# this keeps the host build portable when a platform lacks a system delegate.
+# All five codec delegates are required and verified after configuration.
 set(IM_PREFIX "${CMAKE_BINARY_DIR}/imagemagick-prefix")
 set(IM_BUILD "${CMAKE_BINARY_DIR}/imagemagick-build")
 file(MAKE_DIRECTORY "${IM_BUILD}")
