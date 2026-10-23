@@ -160,6 +160,21 @@ if(WIN32)
   set(IM_CPPFLAGS "-I${CODEC_INCLUDE_BASH}")
   set(IM_LDFLAGS "-L${CODEC_LIB_BASH}")
   set(IM_LIBS "-L${CODEC_LIB_BASH} -lsharpyuv")
+  # blob-private.h selects _stat64 on Windows before nt-base-private.h sees
+  # the MinGW CRT declaration. Include sys/stat.h first, then select the
+  # matching wide 64-bit entry point for NTStatWide without editing the pinned
+  # ImageMagick checkout.
+  set(IM_MINGW_STAT_SHIM_NATIVE "${CMAKE_BINARY_DIR}/generated/mingw-stat-compat.h")
+  file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+  file(WRITE "${IM_MINGW_STAT_SHIM_NATIVE}"
+    "#include <sys/stat.h>\n#if defined(__MINGW32__)\n#define wstat _wstat64\n#endif\n")
+  execute_process(COMMAND "${IM_CYGPATH_COMMAND}" -u "${IM_MINGW_STAT_SHIM_NATIVE}"
+    OUTPUT_VARIABLE IM_MINGW_STAT_SHIM OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE IM_CYGPATH_SHIM_RESULT)
+  if(NOT IM_CYGPATH_SHIM_RESULT EQUAL 0 OR NOT IM_MINGW_STAT_SHIM)
+    message(FATAL_ERROR "cygpath could not translate the MinGW stat compatibility shim")
+  endif()
+  set(IM_CFLAGS "-include${IM_MINGW_STAT_SHIM}")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/scripts/static-codec-pkg-config.sh.in"
     "${IM_PKG_CONFIG_NATIVE}" @ONLY)
   file(CHMOD "${IM_PKG_CONFIG_NATIVE}"
@@ -178,6 +193,7 @@ else()
   set(IM_CPPFLAGS "-I${CODEC_PREFIX}/include")
   set(IM_LDFLAGS "-L${CODEC_PREFIX}/lib")
   set(IM_LIBS "-L${CODEC_PREFIX}/lib -lsharpyuv")
+  set(IM_CFLAGS)
   set(IM_PREFIX_CONFIGURE "${IM_PREFIX}")
 endif()
 if(WIN32 AND DEFINED LMIMG_MSYS2_USR_BIN)
@@ -194,6 +210,7 @@ endif()
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -E env
     "CPPFLAGS=${IM_CPPFLAGS}"
+    "CFLAGS=${IM_CFLAGS}"
     "LDFLAGS=${IM_LDFLAGS}"
     "LIBS=${IM_LIBS}"
     "PKG_CONFIG=${IM_PKG_CONFIG}"
