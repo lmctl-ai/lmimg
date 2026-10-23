@@ -17,3 +17,6 @@ end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 assert(r.code == 0);
+
+print("images/animation_wave.png");
+print("images/animation_wave.gif");
