@@ -1,7 +1,10 @@
 out = ARGV.len() > 0 ? ARGV[0] : "sepia_poster.dslb";
 mkdir("images");
 p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
-let before = img.pattern(420, 480, "0.15 + 0.7*x", "0.1 + 0.6*y", "0.3", "1");
+let before = img.canvas(420, 480, 0.12, 0.08, 0.18, 1.0);
+before.circle(210.0, 190.0, 120.0, 0.84, 0.22, 0.32, 1.0);
+before.circle(210.0, 190.0, 70.0, 0.96, 0.68, 0.22, 1.0);
+before.rect(70.0, 330.0, 280.0, 38.0, 0.32, 0.80, 0.88, 1.0);
 let after = before.copy().sepia(80.0);
 before.text(20.0, 35.0, "COLOR", 22.0, 1.0, 1.0, 1.0, 1.0);
 after.text(20.0, 35.0, "SEPIA", 22.0, 1.0, 1.0, 1.0, 1.0);

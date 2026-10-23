@@ -5,7 +5,7 @@ let a = img.pattern(420, 480, "x", "y", "0.2", "1");
 let b = img.pattern(420, 480, "0.8", "x", "y", "1");
 let im = img.panel(a, b, 20);
 img.assert_true(im.width() == 900);
-im.text(20.0, 35.0, "PROCEDURAL PANEL", 22.0, 0.0, 0.0, 0.0, 1.0);
+im.text(20.0, 35.0, "PROCEDURAL PANEL", 22.0, 1.0, 1.0, 1.0, 1.0);
 im.save("images/thumbnail_grid.png");
 end _dsl_
 savedsl(p, out);

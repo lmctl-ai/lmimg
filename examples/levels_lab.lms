@@ -1,10 +1,14 @@
 out = ARGV.len() > 0 ? ARGV[0] : "levels_lab.dslb";
 mkdir("images");
 p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
-let before = img.pattern(420, 480, "0.1 + 0.8*x", "0.1 + 0.8*x", "0.1 + 0.8*x", "1");
+let before = img.canvas(420, 480, 0.06, 0.07, 0.11, 1.0);
+before.rect(42.0, 100.0, 72.0, 190.0, 0.16, 0.20, 0.28, 1.0);
+before.rect(128.0, 78.0, 72.0, 212.0, 0.30, 0.36, 0.48, 1.0);
+before.rect(214.0, 55.0, 72.0, 235.0, 0.56, 0.62, 0.74, 1.0);
+before.rect(300.0, 36.0, 72.0, 254.0, 0.88, 0.92, 0.98, 1.0);
 let after = before.copy().levels(0.1, 0.85, 0.9);
-before.text(20.0, 35.0, "LINEAR", 22.0, 0.0, 0.0, 0.0, 1.0);
-after.text(20.0, 35.0, "GAMMA", 22.0, 0.0, 0.0, 0.0, 1.0);
+before.text(20.0, 35.0, "LINEAR", 22.0, 1.0, 1.0, 1.0, 1.0);
+after.text(20.0, 35.0, "GAMMA", 22.0, 1.0, 1.0, 1.0, 1.0);
 let im = img.panel(before, after, 20);
 img.assert_true(im.width() == 900);
 img.assert_true(im.height() == 520);

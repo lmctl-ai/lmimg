@@ -1,7 +1,10 @@
 out = ARGV.len() > 0 ? ARGV[0] : "blur_reveal.dslb";
 mkdir("images");
 p = _dsl_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
-let before = img.pattern(420, 480, "x", "0.5", "1-x", "1");
+let before = img.canvas(420, 480, 0.03, 0.04, 0.08, 1.0);
+before.rect(42.0, 82.0, 145.0, 220.0, 0.10, 0.72, 0.96, 1.0);
+before.circle(300.0, 190.0, 82.0, 0.98, 0.34, 0.18, 1.0);
+before.rect(235.0, 315.0, 125.0, 44.0, 0.95, 0.85, 0.25, 1.0);
 let after = before.copy().blur(6.0, 2.0);
 before.text(20.0, 35.0, "SHARP", 22.0, 1.0, 1.0, 1.0, 1.0);
 after.text(20.0, 35.0, "BLURRED", 22.0, 1.0, 1.0, 1.0, 1.0);
