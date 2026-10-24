@@ -47,7 +47,7 @@ diff -u <("$LMSCRIPT" --dsl-signatures schema/lmimg.dsl.json) <("$HOST" --dsl-si
 ok "generated schema, embedded bytes and compiler registry agree"
 "$HOST" --notices >"$WORK/notices"
 cmp "$WORK/notices" THIRD_PARTY_NOTICES
-for name in ImageMagick libpng zlib libjpeg libtiff libwebp cpp-dsl-sdk; do grep -qi "$name" "$WORK/notices" || fail "missing notice $name"; done
+for name in ImageMagick libpng zlib libjpeg libtiff libwebp lmcode-cpp; do grep -qi "$name" "$WORK/notices" || fail "missing notice $name"; done
 ok "embedded notices equal complete license inventory"
 case "$UNAME_S" in
  Linux)
