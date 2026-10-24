@@ -19,8 +19,9 @@ Apache-2.0 at `38062f4b4a0be4346d07a928408da21602545e9e`.
 `THIRD_PARTY_NOTICES` embeds complete upstream license texts and ImageMagick's
 required NOTICE, the IJG README/license and attribution, the selected MIT option
 for stb, Apache-2.0 for Roboto, the SDK's MIT terms, and platform runtime licenses.
-The standard glibc/GCC/MinGW runtime terms are separate from the permissive
-image-library closure. No GIMP/GEGL or copyleft image delegate is used.
+On Linux, lmimg links dynamically to the system glibc (LGPL-2.1, minimum dynamic
+glibc >= 2.35, built on Ubuntu 22.04) and statically links libstdc++, libgcc,
+and all third-party image and codec libraries. No GIMP/GEGL or copyleft image delegate is used.
 
 Pins must be commit objects rather than annotated-tag objects: the original
 codec tag SHAs checked out to different peeled HEAD commits and failed CI.

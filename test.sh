@@ -36,7 +36,7 @@ GEN=""; if [ ! -f "$BUILD_DIR/CMakeCache.txt" ] && command -v ninja >/dev/null 2
 ok "static release build"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
 ok "native pixel, codec and image mathematics oracles"
-[ "$("$HOST" --version)" = 'lmimg 0.1.2' ] || fail version
+[ "$("$HOST" --version)" = 'lmimg 0.1.3' ] || fail version
 ok "exact version"
 cp schema/lmimg.dsl.json "$WORK/schema"
 scripts/gen-schema.py >/dev/null
@@ -50,11 +50,20 @@ cmp "$WORK/notices" THIRD_PARTY_NOTICES
 for name in ImageMagick libpng zlib libjpeg libtiff libwebp cpp-dsl-sdk; do grep -qi "$name" "$WORK/notices" || fail "missing notice $name"; done
 ok "embedded notices equal complete license inventory"
 case "$UNAME_S" in
- Linux) if ldd "$HOST" >/dev/null 2>&1; then fail 'dynamic Linux executable'; fi;;
+ Linux)
+  if command -v readelf >/dev/null 2>&1; then
+   needed="$(readelf -d "$HOST" | awk '/\(NEEDED\)/ { gsub(/\[|\]/, "", $5); print $5 }')"
+  else
+   needed="$(ldd "$HOST" | awk '/=>/ { print $1 } /^\// { sub(/.*\//, "", $1); print $1 }')"
+  fi
+  [ -n "$needed" ] || fail 'expected dynamic glibc linkage on Linux'
+  bad="$(printf '%s\n' "$needed" | grep -v -E '^(libc\.so\.6|libm\.so\.6|libpthread\.so\.0|libdl\.so\.2|librt\.so\.1|ld-linux.*\.so\.[0-9]+)$' || true)"
+  [ -z "$bad" ] || fail "unexpected Linux NEEDED libraries: $bad"
+  ;;
  Darwin) bad="$(otool -L "$HOST" | tail -n +2 | grep -v -E '/usr/lib/(libSystem|libc\+\+|libresolv|libiconv)' || true)"; [ -z "$bad" ] || fail "non-system dylibs: $bad";;
  MINGW*|MSYS*|CYGWIN*) bad="$(objdump -p "$HOST" | grep 'DLL Name' | grep -i -E 'libstdc|libgcc|winpthread|libgomp|libpng|jpeg|tiff|webp|sharpyuv|zlib|libz[.-]|magick|msys-|cygwin' || true)"; [ -z "$bad" ] || fail "runtime DLLs: $bad";;
 esac
-ok "platform static linkage"
+ok "platform linkage (Linux dynamic glibc allowlist; macOS/Windows static)"
 mkdir -p build images
 rm -f images/*.png images/*.gif
 n=0
@@ -152,10 +161,11 @@ python3 - <<'PY'
 from pathlib import Path
 s=Path('THIRD_PARTY_NOTICES').read_text()
 assert Path('LICENSE').read_text() in s
-assert 'Host source/build recipes: https://github.com/lmctl-ai/lmimg' in s
+assert 'dynamically linked to the system glibc (LGPL-2.1' in s
+assert 'glibc >= 2.35' in s
 assert 'GNU LESSER GENERAL PUBLIC LICENSE' in s and 'GCC Runtime Library Exception' in s
 PY
-ok 'review m11: runtime terms and source/relink recipe pointers remain present'
+ok 'review m11: runtime terms and dynamic glibc >= 2.35 notice present'
 if [ "${LMIMG_TEST_NETWORK:-0}" = 1 ]; then
  # Remove the build directory prepended above: this must use release installation.
  AUTORUN_PATH="${PATH#*:}"

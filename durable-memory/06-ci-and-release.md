@@ -159,3 +159,12 @@ match the committed gallery byte for byte. The batch example additionally writes
 Review dispositions, including intentionally scoped rectangular selections and
 stable-input requirements, are recorded in note 09. No implementation or release
 work remains for this review follow-up.
+
+## v0.1.3 Linux dynamic glibc rollout (Rule 14)
+
+Starting in v0.1.3, Linux builds run on `ubuntu-22.04` and `ubuntu-22.04-arm`
+(minimum dynamic glibc >= 2.35) and link with `-static-libstdc++ -static-libgcc`
+while dynamically linking the system glibc (`libc.so.6`, `libm.so.6`,
+`libpthread.so.0`, `libdl.so.2`, `librt.so.1`, `ld-linux*`) and statically
+linking every third-party image and codec library. `test.sh` enforces the
+`readelf -d` NEEDED allowlist on Linux.

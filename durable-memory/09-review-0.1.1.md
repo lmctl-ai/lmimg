@@ -21,7 +21,7 @@ changes. Final verification completed: v0.1.1 is released with exactly five asse
 | m8 | Fixed: LMIMG_TEST_NETWORK now gates an actual public autorun integration check; unset emits an explicit skip. CI enables it. | `reviews C1/m8` runs the gated network path. |
 | m9 | Fixed: README adds healing, dimensions/pixels, builder methods, animation size and utility surface. | `review m9` verifies the specifically omitted names remain documented. |
 | m10 | Valid semantic hardening, fixed: malformed loop operand kinds previously succeeded. A marked generated SDK build copy now rejects non-bool while conditions and non-int range operands; the original SDK bytes/hash stay unchanged. | `review m10` runs hand-crafted v5 bytecode and requires exit 3/JSON/one stderr line. |
-| m11 | Not a newly introduced code defect, as the review states. Retained runtime-license policy: full terms and public source/build/relink recipe pointers remain embedded. Distribution without those materials would require a separate review. | `review m11` checks inventory/pointers; existing notices parity and static-link checks remain. |
+| m11 | Resolved under Rule 14 in v0.1.3: Linux builds dynamically link the system glibc (LGPL-2.1, dynamic glibc >= 2.35) while statically linking libstdc++, libgcc, and all third-party libraries. | `review m11` checks runtime terms and dynamic glibc >= 2.35 notice; `test.sh` enforces the Linux NEEDED allowlist. |
 
 Gallery expanded from eight to thirteen captioned PNG examples plus GIF, including
 a shaded procedural photo-style grade, aspect-preserving batch outputs, watermark,

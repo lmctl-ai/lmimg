@@ -1334,17 +1334,13 @@ litigation is filed.
 
 Platform runtime libraries
 --------------------------
-Linux uses glibc (LGPL-2.1-or-later), libstdc++ and libgcc
-(GPL-3.0-or-later WITH GCC-exception-3.1). These standard platform/compiler
-runtimes are separate from the permissive image-library dependency closure.
-Their terms do not change the MIT license of lmimg's independent code.
-Host source/build recipes: https://github.com/lmctl-ai/lmimg; these support
-rebuilding and relinking with compatible replacement runtimes.
-Corresponding glibc sources: https://www.gnu.org/software/libc/ and Ubuntu's
-source package archive for the CI runner's toolchain. GCC runtime sources:
-https://gcc.gnu.org/. This project does not modify runtime sources.
-Windows statically includes MinGW-w64 runtime components and GCC runtimes;
-macOS links its system libraries and C++ runtime. Full runtime terms follow.
+On Linux, lmimg is dynamically linked to the system glibc (LGPL-2.1, minimum
+dynamic glibc >= 2.35) and statically links libstdc++ and libgcc
+(GPL-3.0-or-later WITH GCC-exception-3.1). Every third-party image and codec
+library is linked statically. Host source and build recipes are published at
+https://github.com/lmctl-ai/lmimg. Windows statically includes MinGW-w64
+runtime components and GCC runtimes; macOS links only system libraries and the
+system C++ runtime. Full runtime terms follow.
 
 
 GNU LGPL 2.1

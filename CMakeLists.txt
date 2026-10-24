@@ -1,12 +1,11 @@
 cmake_minimum_required(VERSION 3.24)
-project(lmimg VERSION 0.1.2 LANGUAGES C CXX)
+project(lmimg VERSION 0.1.3 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
-option(LMIMG_FULL_STATIC "Link the complete executable statically" ON)
 
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imagemagick/.git")
   message(FATAL_ERROR "third_party/imagemagick missing: run scripts/sync-deps.sh")
@@ -284,8 +283,9 @@ if(NOT IM_INSTALL_RESULT EQUAL 0)
   message(FATAL_ERROR "ImageMagick install failed (${IM_INSTALL_RESULT})")
 endif()
 
-# The shipped host may use only static codec archives, including on macOS.
+# The shipped host may use only static codec archives, including on macOS and Linux.
 set(CMAKE_FIND_FRAMEWORK NEVER)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 find_library(IM_CORE_LIBRARY NAMES MagickCore-7.Q8 MagickCore-7.Q8HDRI
   PATHS "${IM_PREFIX}/lib" NO_DEFAULT_PATH REQUIRED)
 find_library(IM_WAND_LIBRARY NAMES MagickWand-7.Q8 MagickWand-7.Q8HDRI
@@ -357,7 +357,7 @@ file(WRITE "${GEN}/notices_embedded.hpp" "#pragma once\n#include <cstddef>\nname
 
 if((CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang") AND NOT APPLE)
   target_link_options(lmimg_magick INTERFACE -static-libstdc++ -static-libgcc)
-  if(LMIMG_FULL_STATIC)
+  if(WIN32)
     target_link_options(lmimg_magick INTERFACE -static)
   endif()
 endif()
