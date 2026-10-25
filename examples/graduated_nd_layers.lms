@@ -1,0 +1,50 @@
+# Landscape edit with layers and masks: a graduated neutral-density filter
+# (a gradient-masked darkening layer) brings back a blown-out sky, a
+# multiply layer deepens the foreground and a screen layer adds the sun's
+# glow. The stack is rendered with img.layers, the GIMP-style way.
+out = ARGV.len() > 0 ? ARGV[0] : "graduated_nd_layers.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# the shot: pale over-exposed sky, dark hills, a lake with ripples
+let shot = img.pattern(420, 480, "min(1,0.78+0.30*(1-y))", "min(1,0.82+0.25*(1-y))", "min(1,0.90+0.2*(1-y))", "1");
+let hills = img.pattern(420, 200, "0.16+0.10*noise(6*x,3*y,5)", "0.22+0.10*noise(6*x,3*y,5)", "0.18", "max(0,sign(y-0.25-0.18*sin(5*x)-0.08*sin(13*x+1)))");
+shot.blend(hills, "over", 1.0, 0, 150);
+let lake = img.pattern(420, 150, "0.35+0.08*noise(40*x,10*y,9)", "0.42+0.08*noise(40*x,10*y,9)", "0.55+0.08*noise(40*x,10*y,9)", "1");
+shot.blend(lake, "over", 1.0, 0, 330);
+let sky_before = shot.copy().crop(40, 20, 340, 100);
+img.assert_true(sky_before.mean(1) > 0.9);
+
+# layer 1: graduated ND, dark layer masked by a top-to-bottom gradient
+let nd = img.canvas(420, 480, 0.05, 0.08, 0.20, 1.0);
+let grad = img.pattern(420, 480, "max(0,min(1,1.6-3.2*y))", "max(0,min(1,1.6-3.2*y))", "max(0,min(1,1.6-3.2*y))", "1");
+# layer 2: multiply with a warm-dark plate on the foreground only
+let plate = img.canvas(420, 480, 0.75, 0.70, 0.62, 1.0);
+let fg = img.pattern(420, 480, "max(0,min(1,3.0*y-1.9))", "max(0,min(1,3.0*y-1.9))", "max(0,min(1,3.0*y-1.9))", "1");
+# layer 3: screen with a sun glow
+let glow = img.canvas(420, 480, 0.0, 0.0, 0.0, 0.0);
+glow.circle(300.0, 150.0, 40.0, 1.0, 0.85, 0.55, 1.0);
+glow.blur(0.0, 25.0);
+let edited = img.layers(420, 480)
+  .add(shot, "over", 1.0, 0, 0)
+  .masked(nd, grad, "over", 0.75, 0, 0)
+  .masked(plate, fg, "multiply", 1.0, 0, 0)
+  .add(glow, "screen", 0.9, 0, 0)
+  .render();
+let sky_after = edited.copy().crop(40, 20, 340, 100);
+img.assert_true(sky_after.mean(1) < 0.6 && sky_after.mean(2) > sky_after.mean(0));
+# the lake keeps its ripples (texture) while getting slightly darker
+let lake_before = shot.copy().crop(40, 360, 340, 100);
+let lake_after = edited.copy().crop(40, 360, 340, 100);
+img.assert_true(lake_after.mean(1) < lake_before.mean(1) && lake_after.stddev(1) > 0.5 * lake_before.stddev(1));
+
+shot.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.45);
+edited.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.45);
+shot.text(18.0, 34.0, "FLAT SHOT, BLOWN SKY", 20.0, 1.0, 1.0, 1.0, 1.0);
+edited.text(18.0, 34.0, "ND GRAD + MULTIPLY + SCREEN LAYERS", 18.0, 1.0, 1.0, 1.0, 1.0);
+img.panel(shot, edited, 20).save("images/graduated_nd_layers.png");
+img.print("sky green " + str(sky_before.mean(1)) + " -> " + str(sky_after.mean(1)));
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/graduated_nd_layers.png");

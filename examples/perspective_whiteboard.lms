@@ -1,0 +1,78 @@
+# Keystone correction of a whiteboard photo. The board is "photographed"
+# from the side (a perspective warp onto a quadrilateral), then rectified by
+# warping with the inverse homography, which the script derives in closed
+# form from the four corners. Straightness of a grid line is measured.
+out = ARGV.len() > 0 ? ARGV[0] : "perspective_whiteboard.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# the whiteboard: faint grid, a sketch and notes
+let board = img.canvas(420, 480, 0.97, 0.97, 0.95, 1.0);
+for (i in range(0, 11)) {
+  board.rect(20.0 + float(i) * 38.0, 20.0, 1.0, 440.0, 0.80, 0.82, 0.85, 1.0);
+}
+for (j in range(0, 12)) {
+  board.rect(20.0, 20.0 + float(j) * 40.0, 380.0, 1.0, 0.80, 0.82, 0.85, 1.0);
+}
+board.text(40.0, 70.0, "Sprint 42 - release plan", 24.0, 0.10, 0.20, 0.55, 1.0);
+board.text(40.0, 120.0, "1. freeze API   (Mon)\n2. perf pass     (Tue-Wed)\n3. docs + demo   (Thu)\n4. tag v2.0      (Fri)", 18.0, 0.15, 0.15, 0.18, 1.0);
+board.rect(60.0, 260.0, 120.0, 70.0, 0.97, 0.97, 0.95, 1.0).rect(60.0, 260.0, 120.0, 3.0, 0.75, 0.15, 0.15, 1.0).rect(60.0, 330.0, 120.0, 3.0, 0.75, 0.15, 0.15, 1.0).rect(60.0, 260.0, 3.0, 70.0, 0.75, 0.15, 0.15, 1.0).rect(180.0, 260.0, 3.0, 70.0, 0.75, 0.15, 0.15, 1.0);
+board.text(72.0, 302.0, "API", 20.0, 0.75, 0.15, 0.15, 1.0);
+board.line(183.0, 295.0, 250.0, 295.0, 0.75, 0.15, 0.15, 1.0, 3.0);
+board.rect(250.0, 260.0, 120.0, 70.0, 0.97, 0.97, 0.95, 1.0).rect(250.0, 260.0, 120.0, 3.0, 0.75, 0.15, 0.15, 1.0).rect(250.0, 330.0, 120.0, 3.0, 0.75, 0.15, 0.15, 1.0).rect(250.0, 260.0, 3.0, 70.0, 0.75, 0.15, 0.15, 1.0).rect(370.0, 260.0, 3.0, 70.0, 0.75, 0.15, 0.15, 1.0);
+board.text(262.0, 302.0, "CLIENTS", 20.0, 0.75, 0.15, 0.15, 1.0);
+board.circle(330.0, 410.0, 28.0, 0.20, 0.55, 0.25, 1.0);
+board.text(305.0, 418.0, "GO", 22.0, 1.0, 1.0, 1.0, 1.0);
+# camera corners (normalised): the board recedes to the right
+let x0 = 0.06; let y0 = 0.14; let x1 = 0.96; let y1 = 0.02;
+let x2 = 0.90; let y2 = 0.98; let x3 = 0.03; let y3 = 0.86;
+let photo = board.copy().perspective(x0, y0, x1, y1, x2, y2, x3, y3);
+# square-to-quad homography H (Heckbert), then its inverse maps the unit
+# corners to the quad that undoes the warp
+let sx = x0 - x1 + x2 - x3; let sy = y0 - y1 + y2 - y3;
+let dx1 = x1 - x2; let dx2 = x3 - x2; let dy1 = y1 - y2; let dy2 = y3 - y2;
+let den = dx1 * dy2 - dx2 * dy1;
+let g = (sx * dy2 - dx2 * sy) / den;
+let h = (dx1 * sy - sx * dy1) / den;
+let a = x1 - x0 + g * x1; let b = x3 - x0 + h * x3; let c = x0;
+let d = y1 - y0 + g * y1; let e = y3 - y0 + h * y3; let f = y0;
+# inverse by adjugate
+let i00 = e - f * h; let i01 = c * h - b; let i02 = b * f - c * e;
+let i10 = f * g - d; let i11 = a - c * g; let i12 = c * d - a * f;
+let i20 = d * h - e * g; let i21 = b * g - a * h; let i22 = a * e - b * d;
+fn mapx(u: float, v: float, m00: float, m01: float, m02: float, m20: float, m21: float, m22: float) -> float {
+  return (m00 * u + m01 * v + m02) / (m20 * u + m21 * v + m22);
+}
+let ux0 = mapx(0.0, 0.0, i00, i01, i02, i20, i21, i22); let uy0 = mapx(0.0, 0.0, i10, i11, i12, i20, i21, i22);
+let ux1 = mapx(1.0, 0.0, i00, i01, i02, i20, i21, i22); let uy1 = mapx(1.0, 0.0, i10, i11, i12, i20, i21, i22);
+let ux2 = mapx(1.0, 1.0, i00, i01, i02, i20, i21, i22); let uy2 = mapx(1.0, 1.0, i10, i11, i12, i20, i21, i22);
+let ux3 = mapx(0.0, 1.0, i00, i01, i02, i20, i21, i22); let uy3 = mapx(0.0, 1.0, i10, i11, i12, i20, i21, i22);
+let fixed = photo.copy().perspective(ux0, uy0, ux1, uy1, ux2, uy2, ux3, uy3);
+# a vertical grid line (x = 172 on the board) is straight again: dark at both ends
+fn line_x(im: Image, y: int, x_from: int, x_to: int) -> int {
+  let best = x_from;
+  let darkest = 2.0;
+  for (x in range(x_from, x_to)) {
+    let v = im.pixel(x, y, 1);
+    if (v < darkest) { darkest = v; best = x; }
+  }
+  return best;
+}
+let top = line_x(fixed, 30, 160, 185);
+let bottom = line_x(fixed, 440, 160, 185);
+let top_photo = line_x(photo, 90, 140, 200);
+let bottom_photo = line_x(photo, 420, 140, 200);
+img.print("grid line x at top/bottom: photo " + str(top_photo) + "/" + str(bottom_photo) + ", rectified " + str(top) + "/" + str(bottom));
+img.assert_true(abs(top - bottom) <= 2 && abs(top_photo - bottom_photo) >= 10);
+img.assert_true(abs(top - 172) <= 3);
+
+let white = img.canvas(420, 480, 0.35, 0.33, 0.30, 1.0);
+let left = white.copy().blend(photo, "over", 1.0, 0, 0);
+let right = white.copy().blend(fixed, "over", 1.0, 0, 0);
+left.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 34.0, "PHOTO FROM THE SIDE", 20.0, 1.0, 1.0, 1.0, 1.0);
+right.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 34.0, "KEYSTONE CORRECTED", 20.0, 1.0, 1.0, 1.0, 1.0);
+img.panel(left, right, 20).save("images/perspective_whiteboard.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/perspective_whiteboard.png");

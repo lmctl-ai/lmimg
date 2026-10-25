@@ -1,0 +1,46 @@
+# Visual regression check: where did the rendered label change between two
+# builds? A difference blend, normalised and false-coloured, turns a subtle
+# edit (a moved badge and a 2 % brightness drift) into a heat map, with PSNR
+# and SSIM reported on the figure.
+out = ARGV.len() > 0 ? ARGV[0] : "image_diff_heatmap.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+fn label(badge_x: float, gain: float) -> Image {
+  let im = img.pattern(280, 490, "0.93*" + str(gain), "0.94*" + str(gain), "0.90*" + str(gain), "1");
+  im.rect(0.0, 0.0, 280.0, 90.0, 0.13 * gain, 0.35 * gain, 0.55 * gain, 1.0);
+  im.text(18.0, 55.0, "ALPINE SPRING", 26.0, 1.0, 1.0, 1.0, 1.0);
+  im.text(18.0, 130.0, "Natural mineral water", 18.0, 0.2, 0.2, 0.25, 1.0);
+  im.text(18.0, 160.0, "750 ml   still", 16.0, 0.35, 0.35, 0.4, 1.0);
+  im.rect(18.0, 190.0, 244.0, 2.0, 0.6 * gain, 0.6 * gain, 0.6 * gain, 1.0);
+  im.text(18.0, 230.0, "Calcium   48 mg/l\nMagnesium 12 mg/l\nSodium     6 mg/l\nNitrate   <1 mg/l", 15.0, 0.25, 0.25, 0.3, 1.0);
+  im.circle(badge_x, 400.0, 34.0, 0.85 * gain, 0.55 * gain, 0.12 * gain, 1.0);
+  im.text(badge_x - 22.0, 406.0, "NEW", 20.0, 1.0, 1.0, 1.0, 1.0);
+  im.text(18.0, 470.0, "Bottled at source, 1204 m", 13.0, 0.4, 0.4, 0.45, 1.0);
+  return im;
+}
+let build_a = label(200.0, 1.0);
+let build_b = label(214.0, 0.98);
+let psnr = build_a.psnr(build_b);
+let ssim = build_a.ssim(build_b);
+let diff = build_b.copy().blend(build_a, "difference", 1.0, 0, 0).grayscale().normalize().levels(0.0, 0.5, 1.0).colormap("heat");
+# the hottest region is the badge; the untouched text area stays cool
+let badge = diff.copy().crop(160, 360, 100, 80);
+let quiet = diff.copy().crop(20, 100, 200, 80);
+img.print("PSNR " + str(psnr) + " dB, SSIM " + str(ssim) + ", badge heat " + str(badge.mean(0)) + ", quiet area " + str(quiet.mean(0)));
+img.assert_true(badge.mean(0) > 2.0 * quiet.mean(0) && quiet.mean(0) < 0.35);
+img.assert_true(psnr > 15.0 && psnr < 40.0 && ssim > 0.8);
+diff.rect(0.0, 0.0, 280.0, 46.0, 0.0, 0.0, 0.0, 0.6);
+diff.text(10.0, 20.0, "DIFF HEAT MAP", 15.0, 1.0, 1.0, 1.0, 1.0);
+diff.text(10.0, 38.0, "PSNR " + str(floor(psnr * 10.0) / 10.0) + " dB   SSIM " + str(floor(ssim * 1000.0) / 1000.0), 13.0, 1.0, 0.9, 0.6, 1.0);
+build_a.rect(0.0, 90.0, 280.0, 22.0, 0.0, 0.0, 0.0, 0.55);
+build_b.rect(0.0, 90.0, 280.0, 22.0, 0.0, 0.0, 0.0, 0.55);
+build_a.text(10.0, 106.0, "BUILD 1.4.0", 14.0, 1.0, 1.0, 1.0, 1.0);
+build_b.text(10.0, 106.0, "BUILD 1.4.1", 14.0, 1.0, 1.0, 1.0, 1.0);
+let im = img.montage().add(build_a).add(build_b).add(diff).render(3, 15, 1.0, 1.0, 1.0, 1.0);
+img.assert_true(im.width() == 900 && im.height() == 520);
+im.save("images/image_diff_heatmap.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/image_diff_heatmap.png");

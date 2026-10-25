@@ -1,0 +1,21 @@
+out = ARGV.len() > 0 ? ARGV[0] : "edge_map.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let before = img.canvas(420, 480, 0.04, 0.06, 0.10, 1.0);
+before.rect(42.0, 78.0, 150.0, 230.0, 0.08, 0.75, 0.95, 1.0);
+before.circle(300.0, 195.0, 82.0, 0.95, 0.27, 0.16, 1.0);
+before.line(35.0, 360.0, 385.0, 360.0, 0.95, 0.92, 0.35, 1.0, 7.0);
+let after = before.copy().edges(2.0).grayscale();
+after.blend(before, "multiply", 0.85, 0, 0);
+before.text(20.0, 35.0, "FIELD", 22.0, 1.0, 1.0, 1.0, 1.0);
+after.text(20.0, 35.0, "EDGES", 22.0, 1.0, 1.0, 1.0, 1.0);
+let im = img.panel(before, after, 20);
+img.assert_true(im.width() == 900);
+img.assert_true(im.height() == 520);
+im.save("images/edge_map.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+
+print("images/edge_map.png");

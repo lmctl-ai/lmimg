@@ -1,0 +1,17 @@
+out = ARGV.len() > 0 ? ARGV[0] : "watermark_story.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let base = img.pattern(900, 520, "0.10 + 0.28*y", "0.18 + 0.30*x", "0.34 + 0.28*(1-y)", "1");
+base.circle(230.0, 250.0, 130.0, 0.18, 0.58, 0.82, 0.72);
+base.circle(670.0, 238.0, 150.0, 0.94, 0.42, 0.24, 0.62);
+base.line(30.0, 445.0, 870.0, 95.0, 1.0, 0.90, 0.54, 0.45, 5.0);
+let mark = img.canvas(900, 520, 0.0, 0.0, 0.0, 0.0);
+mark.text(548.0, 474.0, "LMIMG / ORIGINAL STUDY", 22.0, 1.0, 1.0, 1.0, 0.72);
+mark.text(42.0, 54.0, "PROCEDURAL ARCHIVE", 20.0, 1.0, 1.0, 1.0, 0.82);
+base.blend(mark, "over", 1.0, 0, 0);
+base.save("images/watermark_story.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/watermark_story.png");

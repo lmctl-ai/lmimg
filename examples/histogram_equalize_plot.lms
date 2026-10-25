@@ -1,0 +1,66 @@
+# Histogram equalisation with the numbers to prove it (lmimg + lmplot).
+# A foggy, low-contrast valley shot is equalised; lmimg exports the 256-bin
+# histograms of both versions, lmplot draws them, and lmimg assembles the
+# before/after pictures and the chart into one figure.
+out = ARGV.len() > 0 ? ARGV[0] : "histogram_equalize_plot.dslb";
+mkdir("images");
+mkdir("build");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# fog compresses everything into the 0.45..0.75 range
+let fog = img.pattern(444, 280, "0.55+0.12*(1-y)+0.04*noise(5*x,3*y,2)", "0.57+0.12*(1-y)+0.04*noise(5*x,3*y,2)", "0.62+0.10*(1-y)", "1");
+let ridge = img.pattern(444, 160, "0.46+0.06*noise(9*x,4*y,7)", "0.49+0.06*noise(9*x,4*y,7)", "0.55", "max(0,sign(y-0.30-0.22*sin(4*x+1)-0.08*sin(11*x)))");
+fog.blend(ridge, "over", 1.0, 0, 60);
+let near = img.pattern(444, 110, "0.44+0.05*noise(14*x,6*y,3)", "0.47+0.05*noise(14*x,6*y,3)", "0.50", "max(0,sign(y-0.35-0.25*sin(3*x)))");
+fog.blend(near, "over", 1.0, 0, 170);
+fog.rect(300.0, 210.0, 12.0, 40.0, 0.50, 0.50, 0.52, 1.0).rect(290.0, 205.0, 32.0, 6.0, 0.48, 0.48, 0.50, 1.0);
+let span_before = fog.max(1) - fog.min(1);
+img.assert_true(span_before < 0.5);
+let clear = fog.copy().equalize();
+img.assert_true(clear.max(1) - clear.min(1) > 0.95);
+img.assert_true(clear.stddev(1) > 2.0 * fog.stddev(1));
+fog.histogram("build/hist_before.csv");
+clear.histogram("build/hist_after.csv");
+fog.rect(0.0, 0.0, 444.0, 40.0, 0.0, 0.0, 0.0, 0.45).text(14.0, 28.0, "FOGGY VALLEY  (tones 0.45..0.75)", 18.0, 1.0, 1.0, 1.0, 1.0);
+clear.rect(0.0, 0.0, 444.0, 40.0, 0.0, 0.0, 0.0, 0.45).text(14.0, 28.0, "HISTOGRAM EQUALISED", 18.0, 1.0, 1.0, 1.0, 1.0);
+img.panel(fog, clear, 4).save("build/hist_panel.png");
+img.print("green stddev " + str(fog.stddev(1)) + " -> " + str(clear.stddev(1)));
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+
+plot = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.cmd("set datafile separator ','");
+plot.png("build/hist_chart.png", 900, 232);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set style fill solid 0.85 noborder");
+plot.cmd("set boxwidth 1");
+plot.cmd("set xrange [0:255]");
+plot.cmd("set xtics 0,64,255 font ',9'");
+plot.cmd("set ytics font ',9'");
+plot.cmd("set grid ytics lc rgb '#e2e8f0'");
+plot.cmd("set xlabel 'intensity bin (mean RGB)' font ',9' offset 0,0.5");
+plot.cmd("set lmargin 9");
+plot.cmd("set title 'before: tones piled in the middle' font ',10'");
+plot.cmd("plot 'build/hist_before.csv' using 1:2 with boxes lc rgb '#64748b' notitle");
+plot.cmd("set title 'after equalize(): flat cumulative spread' font ',10'");
+plot.cmd("plot 'build/hist_after.csv' using 1:2 with boxes lc rgb '#2563eb' notitle");
+plot.cmd("unset multiplot");
+plot.close();
+end _lmcode_
+savedsl(plot, "build/hist_chart.dslb");
+r = system ${dsl_cli(plot)} --dsl build/hist_chart.dslb;
+assert(r.code == 0);
+
+q = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let page = img.canvas(900, 520, 1.0, 1.0, 1.0, 1.0);
+let top = img.open("build/hist_panel.png");
+let chart = img.open("build/hist_chart.png");
+img.assert_true(top.width() == 900 && chart.width() == 900);
+page.blend(top, "over", 1.0, 0, 0).blend(chart, "over", 1.0, 0, 288);
+page.save("images/histogram_equalize_plot.png");
+end _lmcode_
+savedsl(q, "build/hist_page.dslb");
+r = system ${dsl_cli(q)} --dsl build/hist_page.dslb;
+assert(r.code == 0);
+print("images/histogram_equalize_plot.png");

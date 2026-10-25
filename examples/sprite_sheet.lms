@@ -1,0 +1,69 @@
+# Sprite sheet for a game: eight frames of a bouncing ball with squash and
+# stretch and a blurred contact shadow, packed into a 4 x 2 atlas with fixed
+# cells, plus the same frames as a looping GIF.
+out = ARGV.len() > 0 ? ARGV[0] : "sprite_sheet.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let cell = 110;
+fn frame(i: int, cell: int) -> Image {
+  let t = float(i) / 8.0;
+  let rise = 1.0 - pow(2.0 * t - 1.0, 2.0);         # 0 on the ground, 1 at the apex
+  let contact = max(0.0, 1.0 - 6.0 * min(t, 1.0 - t)); # 1 at impact, 0 in flight
+  let sx = 1.0 + 0.35 * contact;
+  let sy = 1.0 - 0.30 * contact + 0.12 * rise;
+  let f = img.canvas(cell, cell, 0.0, 0.0, 0.0, 0.0);
+  let shadow = img.canvas(cell, 30, 0.0, 0.0, 0.0, 0.0);
+  shadow.circle(55.0, 15.0, 22.0 + 10.0 * contact - 8.0 * rise, 0.0, 0.0, 0.0, 0.5 - 0.3 * rise);
+  shadow.resize(cell, 10);
+  shadow.blur(0.0, 2.0);
+  f.blend(shadow, "over", 1.0, 0, 96);
+  let ball = img.canvas(60, 60, 0.0, 0.0, 0.0, 0.0);
+  ball.circle(30.0, 30.0, 26.0, 0.95, 0.35, 0.15, 1.0);
+  ball.circle(22.0, 22.0, 9.0, 1.0, 0.75, 0.55, 1.0);
+  ball.resize(int(60.0 * sx), int(60.0 * sy));
+  let bw = ball.width();
+  let bh = ball.height();
+  let ground = 100.0;
+  let cy = ground - 0.5 * float(bh) - 30.0 * rise;
+  f.blend(ball, "over", 1.0, 55 - bw / 2, int(cy - 0.5 * float(bh)));
+  return f;
+}
+let atlas = img.montage();
+let gif = img.animation();
+for (i in range(0, 8)) {
+  let fr = frame(i, cell);
+  atlas.add(fr);
+  gif.add(fr, 6);
+}
+let sheet = atlas.render(4, 8, 0.0, 0.0, 0.0, 0.0);
+img.assert_true(sheet.width() == 4 * cell + 5 * 8 && sheet.height() == 2 * cell + 3 * 8);
+# frame 0 (impact) is squashed wide, frame 4 (apex) is stretched tall
+let f0 = sheet.copy().crop(8, 8, cell, cell);
+let f4 = sheet.copy().crop(8, 8 + cell + 8, cell, cell);
+let wide0 = f0.copy().crop(0, 70, cell, 30);
+let wide4 = f4.copy().crop(0, 70, cell, 30);
+img.assert_true(wide0.mean(3) > wide4.mean(3));
+gif.save("images/sprite_sheet.gif");
+
+# presentation page: atlas on a checkerboard with cell outlines
+let page = img.pattern(900, 520, "0.16+0.04*mod(floor(x*45)+floor(y*26),2)", "0.16+0.04*mod(floor(x*45)+floor(y*26),2)", "0.18+0.04*mod(floor(x*45)+floor(y*26),2)", "1");
+let big = sheet.copy().resize(840, 427);
+page.blend(big, "over", 1.0, 30, 70);
+for (i in range(0, 4)) {
+  for (j in range(0, 2)) {
+    let x = 30.0 + 14.0 + float(i) * 206.5;
+    let y = 70.0 + 14.0 + float(j) * 206.5;
+    page.rect(x, y, 192.0, 1.0, 0.3, 0.8, 1.0, 0.6).rect(x, y + 192.0, 192.0, 1.0, 0.3, 0.8, 1.0, 0.6);
+    page.rect(x, y, 1.0, 192.0, 0.3, 0.8, 1.0, 0.6).rect(x + 192.0, y, 1.0, 192.0, 0.3, 0.8, 1.0, 0.6);
+    page.text(x + 6.0, y + 18.0, "frame " + str(i + 4 * j), 14.0, 0.3, 0.8, 1.0, 1.0);
+  }
+}
+page.text(30.0, 48.0, "SPRITE ATLAS  8 frames  110 x 110 px cells  squash and stretch + blurred shadow", 20.0, 1.0, 1.0, 1.0, 1.0);
+page.save("images/sprite_sheet.png");
+img.print("atlas " + str(sheet.width()) + "x" + str(sheet.height()) + ", GIF frames " + str(gif.size()));
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/sprite_sheet.png");
+print("images/sprite_sheet.gif");

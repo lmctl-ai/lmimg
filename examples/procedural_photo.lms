@@ -1,0 +1,19 @@
+out = ARGV.len() > 0 ? ARGV[0] : "procedural_photo.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let background = img.pattern(420, 480, "0.07 + 0.20*y", "0.10 + 0.17*y", "0.17 + 0.25*y", "1");
+let shadow = img.pattern(420, 480, "0.03", "0.025", "0.02", "max(0,0.34 - 3.5*((x-0.51)*(x-0.51) + 2.0*(y-0.84)*(y-0.84)))");
+background.blend(shadow, "over", 1.0, 0, 0);
+let fruit = img.pattern(420, 480, "0.30 + 0.46*sqrt(max(0,1-((x-0.50)*(x-0.50)/0.075+(y-0.53)*(y-0.53)/0.09))) + 0.10*(1-x) + 0.16*max(0,1-14*((x-0.36)*(x-0.36)+(y-0.39)*(y-0.39))) + 0.008*sin(140*x+90*y)", "0.07 + 0.21*sqrt(max(0,1-((x-0.50)*(x-0.50)/0.075+(y-0.53)*(y-0.53)/0.09))) + 0.05*(1-x) + 0.08*max(0,1-14*((x-0.36)*(x-0.36)+(y-0.39)*(y-0.39))) + 0.006*sin(120*x+50*y)", "0.025 + 0.045*sqrt(max(0,1-((x-0.50)*(x-0.50)/0.075+(y-0.53)*(y-0.53)/0.09))) + 0.008*max(0,1-14*((x-0.36)*(x-0.36)+(y-0.39)*(y-0.39)))", "min(1,max(0,80*(1-((x-0.50)*(x-0.50)/0.075+(y-0.53)*(y-0.53)/0.09))))");
+let scene = background.copy().blend(fruit, "over", 1.0, 0, 0);
+let graded = scene.copy().levels(0.08, 0.94, 0.92).hsl(4.0, 1.08, 1.02).vignette(260.0, 180.0).unsharp(1.2, 0.8, 0.7, 0.0);
+scene.text(18.0, 34.0, "PROCEDURAL SCENE", 20.0, 1.0, 1.0, 1.0, 1.0);
+graded.text(18.0, 34.0, "PHOTO-STYLE GRADE", 20.0, 1.0, 0.94, 0.78, 1.0);
+let im = img.panel(scene, graded, 20);
+im.resize(900, 520);
+im.save("images/procedural_photo.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/procedural_photo.png");

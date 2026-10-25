@@ -1,0 +1,19 @@
+out = ARGV.len() > 0 ? ARGV[0] : "before_after_panels.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let before = img.pattern(420, 480, "0.08 + 0.62*y", "0.12 + 0.38*x", "0.22 + 0.52*(1-y)", "1");
+before.circle(210.0, 205.0, 122.0, 0.92, 0.28, 0.18, 1.0);
+before.circle(210.0, 205.0, 78.0, 0.96, 0.72, 0.24, 1.0);
+before.line(36.0, 352.0, 384.0, 352.0, 0.10, 0.88, 0.78, 1.0, 6.0);
+let after = before.copy().levels(0.16, 0.84, 0.82).hsl(198.0, 1.16, 1.02).unsharp(1.4, 0.8, 0.7, 0.0);
+before.text(18.0, 38.0, "ORIGINAL", 22.0, 1.0, 1.0, 1.0, 1.0);
+after.text(18.0, 38.0, "DELIVERABLE", 22.0, 1.0, 1.0, 1.0, 1.0);
+let panel = img.panel(before, after, 20);
+panel.resize(900, 520);
+panel.save("images/before_after_panels.png");
+img.assert_true(panel.width() == 900);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/before_after_panels.png");

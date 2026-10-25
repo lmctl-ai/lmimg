@@ -1,0 +1,65 @@
+# Lens calibration chart: barrel distortion from a wide lens bows straight
+# lines. The script calibrates the correction by sweeping the inverse
+# coefficient and keeping the one that leaves the least residual bow in a
+# grid line, measured in pixels, as a calibration report would.
+out = ARGV.len() > 0 ? ARGV[0] : "lens_undistort.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let chart = img.canvas(420, 480, 0.96, 0.96, 0.94, 1.0);
+for (i in range(0, 10)) {
+  chart.rect(30.0 + float(i) * 40.0, 0.0, 2.0, 480.0, 0.15, 0.15, 0.18, 1.0);
+}
+for (j in range(0, 12)) {
+  chart.rect(0.0, 20.0 + float(j) * 40.0, 420.0, 2.0, 0.15, 0.15, 0.18, 1.0);
+}
+chart.circle(210.0, 240.0, 18.0, 0.80, 0.15, 0.15, 1.0);
+chart.circle(70.0, 60.0, 10.0, 0.80, 0.15, 0.15, 1.0).circle(350.0, 60.0, 10.0, 0.80, 0.15, 0.15, 1.0);
+chart.circle(70.0, 420.0, 10.0, 0.80, 0.15, 0.15, 1.0).circle(350.0, 420.0, 10.0, 0.80, 0.15, 0.15, 1.0);
+let k = 0.18;
+let camera = chart.copy().lens(k);
+# find the vertical line nearest x = 70 at three heights and report its bow
+# (rows well inside the frame: the corners of a barrel image are lost)
+fn line_x(im: Image, y: int, x_from: int, x_to: int) -> int {
+  let best = x_from;
+  let darkest = 2.0;
+  for (x in range(x_from, x_to)) {
+    let v = im.pixel(x, y, 1);
+    if (v < darkest) { darkest = v; best = x; }
+  }
+  return best;
+}
+fn bow(im: Image) -> int {
+  let top = line_x(im, 100, 30, 130);
+  let mid = line_x(im, 240, 30, 130);
+  let bot = line_x(im, 380, 30, 130);
+  return abs(top - mid) + abs(bot - mid);
+}
+let bow_camera = bow(camera);
+let bow_chart = bow(chart);
+# calibrate: sweep the inverse coefficient, keep the least residual bow
+let best_k = 0.0;
+let best_bow = 100000;
+for (i in range(0, 16)) {
+  let kk = -0.10 - 0.02 * float(i);
+  let trial = bow(camera.copy().lens(kk));
+  if (trial < best_bow) { best_bow = trial; best_k = kk; }
+}
+let corrected = camera.copy().lens(best_k);
+let bow_fixed = bow(corrected);
+img.print("line bow in px: chart " + str(bow_chart) + ", camera " + str(bow_camera) + ", corrected " + str(bow_fixed) + " with k = " + str(best_k));
+# a single-coefficient inverse cannot cancel r(1+kr^2) exactly; a few px remain
+img.assert_true(bow_chart == 0 && bow_camera >= 8 && bow_fixed <= 6 && 3 * bow_fixed <= bow_camera);
+
+camera.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 34.0, "WIDE LENS, k = +0.18", 20.0, 1.0, 1.0, 1.0, 1.0);
+corrected.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 34.0, "CALIBRATED INVERSE, k = " + str(best_k), 20.0, 1.0, 1.0, 1.0, 1.0);
+camera.rect(0.0, 448.0, 420.0, 32.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 470.0, "bow of the x=70 line: " + str(bow_camera) + " px", 16.0, 1.0, 0.85, 0.5, 1.0);
+corrected.rect(0.0, 448.0, 420.0, 32.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 470.0, "residual bow: " + str(bow_fixed) + " px", 16.0, 1.0, 0.85, 0.5, 1.0);
+let bg = img.canvas(420, 480, 0.30, 0.30, 0.32, 1.0);
+let left = bg.copy().blend(camera, "over", 1.0, 0, 0);
+let right = bg.copy().blend(corrected, "over", 1.0, 0, 0);
+img.panel(left, right, 20).save("images/lens_undistort.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/lens_undistort.png");

@@ -1,0 +1,48 @@
+# Portrait retouch: heal three blemishes, lift exposure, warm the skin tone,
+# add a soft vignette and a touch of sharpening. The "portrait" is procedural
+# (a shaded skin-tone oval with grain) so the script needs no photograph.
+out = ARGV.len() > 0 ? ARGV[0] : "portrait_retouch.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+let f = "max(0,1-((x-0.5)*(x-0.5)/0.085+(y-0.47)*(y-0.47)/0.15))";
+let skin = "pow(" + f + ",0.25)*(0.9+0.1*noise(36*x,36*y,3))*(0.75+0.25*(1-y))";
+let shot = img.pattern(420, 480,
+  "0.10+0.82*" + skin,
+  "0.09+0.60*" + skin,
+  "0.10+0.46*" + skin, "1");
+# hair line and a dark top edge so the oval reads as a head
+shot.rect(0.0, 0.0, 420.0, 70.0, 0.11, 0.08, 0.07, 1.0);
+# eyes and mouth so the face has structure
+shot.circle(160.0, 215.0, 11.0, 0.18, 0.12, 0.10, 1.0);
+shot.circle(260.0, 215.0, 11.0, 0.18, 0.12, 0.10, 1.0);
+shot.rect(178.0, 318.0, 64.0, 7.0, 0.55, 0.28, 0.26, 1.0);
+# three blemishes a retoucher would remove
+shot.circle(150.0, 300.0, 5.0, 0.38, 0.16, 0.14, 1.0);
+shot.circle(282.0, 262.0, 4.0, 0.40, 0.18, 0.16, 1.0);
+shot.circle(222.0, 372.0, 4.0, 0.36, 0.15, 0.13, 1.0);
+let before_center = shot.pixel(150, 300, 0);
+let neighbour = shot.pixel(164, 300, 0);
+img.assert_true(neighbour - before_center > 0.15);
+
+let fixed = shot.copy();
+fixed.heal(143, 293, 15, 15, 6).heal(276, 256, 13, 13, 6).heal(216, 366, 13, 13, 6);
+# the healed patch continues the skin shading: it sits between the skin on
+# either side of it and is smooth
+let healed = fixed.copy().crop(143, 293, 15, 15);
+let left_skin = fixed.copy().crop(129, 293, 12, 15);
+let right_skin = fixed.copy().crop(159, 293, 12, 15);
+img.print("healed patch mean " + str(healed.mean(0)) + ", skin left " + str(left_skin.mean(0)) + ", right " + str(right_skin.mean(0)));
+img.assert_close(healed.mean(0), 0.5 * (left_skin.mean(0) + right_skin.mean(0)), 0.03);
+img.assert_true(healed.stddev(0) < 0.04);
+fixed.levels(0.03, 1.12, 0.96).hsl(-3.0, 1.06, 1.0).unsharp(1.5, 0.9, 0.6, 0.02).vignette(230.0, 220.0);
+img.assert_true(fixed.mean(0) > shot.mean(0));
+
+shot.text(18.0, 34.0, "RAW SHOT", 22.0, 1.0, 1.0, 1.0, 1.0);
+fixed.text(18.0, 34.0, "RETOUCHED", 22.0, 1.0, 0.95, 0.85, 1.0);
+let im = img.panel(shot, fixed, 20);
+im.save("images/portrait_retouch.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/portrait_retouch.png");

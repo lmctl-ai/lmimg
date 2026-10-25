@@ -1,0 +1,43 @@
+# Denoising a corrupted scan: salt-and-pepper noise (dead and hot pixels)
+# on a line drawing. A 3x3 median removes it almost completely while a
+# Gaussian blur of similar strength only smears it; PSNR against the clean
+# original says which filter to use.
+out = ARGV.len() > 0 ? ARGV[0] : "salt_pepper_denoise.dslb";
+mkdir("images");
+p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
+# clean drawing: a technical sketch of a bracket with dimension lines
+let clean = img.canvas(280, 490, 0.97, 0.97, 0.95, 1.0);
+clean.rect(60.0, 80.0, 160.0, 24.0, 0.25, 0.25, 0.28, 1.0).rect(60.0, 80.0, 24.0, 300.0, 0.25, 0.25, 0.28, 1.0);
+clean.circle(72.0, 350.0, 7.0, 0.97, 0.97, 0.95, 1.0).circle(190.0, 92.0, 6.0, 0.97, 0.97, 0.95, 1.0);
+clean.line(60.0, 410.0, 220.0, 410.0, 0.1, 0.3, 0.7, 1.0, 1.5).line(60.0, 400.0, 60.0, 420.0, 0.1, 0.3, 0.7, 1.0, 1.5).line(220.0, 400.0, 220.0, 420.0, 0.1, 0.3, 0.7, 1.0, 1.5);
+clean.text(118.0, 440.0, "160 mm", 15.0, 0.1, 0.3, 0.7, 1.0);
+clean.line(240.0, 80.0, 240.0, 380.0, 0.1, 0.3, 0.7, 1.0, 1.5).text(246.0, 235.0, "300", 13.0, 0.1, 0.3, 0.7, 1.0);
+clean.text(20.0, 40.0, "BRACKET B-12", 18.0, 0.2, 0.2, 0.22, 1.0);
+# 6 % of the pixels are dead (black) or hot (white)
+let salt = img.pattern(280, 490, "1", "1", "1", "max(0,sign(0.03-hash(x,y,21)))");
+let pepper = img.pattern(280, 490, "0", "0", "0", "max(0,sign(0.03-hash(x,y,22)))");
+let noisy = clean.copy().blend(salt, "over", 1.0, 0, 0).blend(pepper, "over", 1.0, 0, 0);
+let median = noisy.copy().morphology("median", 1);
+let gaussian = noisy.copy().blur(0.0, 1.0);
+let psnr_noisy = noisy.psnr(clean);
+let psnr_median = median.psnr(clean);
+let psnr_gauss = gaussian.psnr(clean);
+img.print("PSNR noisy " + str(psnr_noisy) + ", gaussian " + str(psnr_gauss) + ", median " + str(psnr_median));
+img.assert_true(psnr_median > psnr_gauss + 3.0 && psnr_gauss > psnr_noisy);
+img.assert_true(psnr_median > 25.0);
+fn tag(im: Image, title: string, value: float) -> Image {
+  im.rect(0.0, 455.0, 280.0, 35.0, 0.0, 0.0, 0.0, 0.7);
+  im.text(10.0, 470.0, title, 13.0, 1.0, 1.0, 1.0, 1.0);
+  im.text(10.0, 485.0, "PSNR " + str(floor(value * 10.0) / 10.0) + " dB", 12.0, 1.0, 0.85, 0.5, 1.0);
+  return im;
+}
+tag(noisy, "SCAN WITH 6% DEAD/HOT PIXELS", psnr_noisy);
+tag(gaussian, "GAUSSIAN BLUR sigma 1", psnr_gauss);
+tag(median, "MEDIAN 3x3", psnr_median);
+let im = img.montage().add(noisy).add(gaussian).add(median).render(3, 15, 0.85, 0.85, 0.85, 1.0);
+im.save("images/salt_pepper_denoise.png");
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+print("images/salt_pepper_denoise.png");
