@@ -51,7 +51,7 @@ Image editing, compositing and procedural graphics from scripts: a static ImageM
 
 ## Quickstart
 
-Install an autorun-capable [lmctl](https://github.com/lmctl-ai/lmctl) (0.2.401 or newer), then paste any caption above into a terminal. The script installs the latest lmimg [release](https://github.com/lmctl-ai/lmimg/releases) (self-contained binaries for Linux x64/arm64 with dynamic glibc >= 2.35, macOS arm64/x64, Windows x64; all third-party libraries, fonts and codecs are linked statically, so no ImageMagick, fonts or codec DLLs are needed), runs itself, checks its own numbers and writes `images/<example>.png` in the current directory. Examples that combine hosts install lmplot or lmdraw the same way.
+Install an autorun-capable [lmctl](https://github.com/lmctl-ai/lmctl) (0.2.401 or newer), then paste any caption above into a terminal. The current lmimg [release](https://github.com/lmctl-ai/lmimg/releases) contains self-contained Linux x64/arm64 binaries with dynamic glibc >= 2.35; all third-party libraries, fonts and codecs are linked statically, so no ImageMagick, fonts or codec DLLs are needed. Earlier releases may contain macOS and Windows assets; those platforms are not produced by the current lane. The script runs itself, checks its own numbers and writes `images/<example>.png` in the current directory. Examples that combine hosts install lmplot or lmdraw the same way.
 
 ```lms
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
@@ -160,7 +160,7 @@ private implementation detail --verify
 ./test.sh
 ```
 
-CMake builds the pinned source dependencies into one executable. `test.sh` checks native pixel/codec/math oracles, DSL/compiler signatures, every example, byte-identical reruns, error paths, notices, platform linkage (dynamic glibc >= 2.35 allowlist on Linux, static third-party libraries everywhere) and memory-limit failures; CI runs the same suite on all five release platforms. See durable-memory for pins, implementation decisions, measured results and release evidence.
+CMake builds the pinned source dependencies into one executable. `test.sh` checks native pixel/codec/math oracles, DSL/compiler signatures, every example, byte-identical reruns, error paths, notices, platform linkage (dynamic glibc >= 2.35 allowlist on Linux, static third-party libraries everywhere) and memory-limit failures; CI runs the same suite on the Linux x64 and arm64 release builds. See durable-memory for pins, implementation decisions, measured results and release evidence.
 
 ## License
 
