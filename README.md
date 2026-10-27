@@ -49,6 +49,16 @@ Image editing, compositing and procedural graphics from scripts: a static ImageM
 | ![Procedural thumbnails](docs/images/thumbnail_grid.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/thumbnail_grid.lms` | ![Moving color wave](docs/images/animation_wave.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/animation_wave.lms` |
 | ![Watermarked procedural artwork](docs/images/watermark_story.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/watermark_story.lms` | ![Before and after panels](docs/images/before_after_panels.png)<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/before_after_panels.lms` |
 
+## Install lmctl
+
+Everything in this repository runs through [lmctl](https://lmctl.com), the core tool of the lmctl family. Install it once, then run any `.lms` file or raw URL:
+
+```bash
+npm install -g @lmctl-ai/lmctl
+lmctl autorun path/to/example.lms
+lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmimg/main/examples/example.lms
+```
+
 ## Quickstart
 
 Install an autorun-capable [lmctl](https://github.com/lmctl-ai/lmctl) (0.2.401 or newer), then paste any caption above into a terminal. The current lmimg [release](https://github.com/lmctl-ai/lmimg/releases) contains self-contained Linux x64/arm64 binaries with dynamic glibc >= 2.35; all third-party libraries, fonts and codecs are linked statically, so no ImageMagick, fonts or codec DLLs are needed. Earlier releases may contain macOS and Windows assets; those platforms are not produced by the current lane. The script runs itself, checks its own numbers and writes `images/<example>.png` in the current directory. Examples that combine hosts install lmplot or lmdraw the same way.
