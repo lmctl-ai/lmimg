@@ -12,7 +12,7 @@ work="$(mktemp -d "${TMPDIR:-/tmp}/lmimg-gallery-XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 for src in "$HERE"/examples/*.lms; do
   name="$(basename "$src" .lms)"
-  (cd "$work" && "$COMPILER" "$src" "${name}.dslb" >/dev/null && "$HOST" --dsl "${name}.dslb" >/dev/null)
+  (cd "$work" && "$COMPILER" "$src" "${name}.dslb" >/dev/null && "$HOST" --lmcode "${name}.dslb" >/dev/null)
   cp "$work/images/${name}.png" "$HERE/docs/images/${name}.png"
   if [ -f "$work/images/${name}.gif" ]; then cp "$work/images/${name}.gif" "$HERE/docs/images/${name}.gif"; fi
 done

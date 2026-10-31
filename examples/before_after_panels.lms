@@ -14,6 +14,6 @@ panel.save("images/before_after_panels.png");
 img.assert_true(panel.width() == 900);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/before_after_panels.png");

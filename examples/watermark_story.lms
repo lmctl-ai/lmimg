@@ -12,6 +12,6 @@ base.blend(mark, "over", 1.0, 0, 0);
 base.save("images/watermark_story.png");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/watermark_story.png");

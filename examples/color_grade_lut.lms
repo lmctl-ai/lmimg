@@ -53,6 +53,6 @@ im.save("images/color_grade_lut.png");
 img.print("LUT vs direct grade PSNR " + str(street_lut.psnr(street_direct)) + " dB");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/color_grade_lut.png");

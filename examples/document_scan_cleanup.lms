@@ -30,6 +30,6 @@ img.panel(page, clean, 20).save("images/document_scan_cleanup.png");
 img.print("corner brightness " + str(corner_before) + " -> " + str(clean.pixel(405, 465, 1)));
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/document_scan_cleanup.png");

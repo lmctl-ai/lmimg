@@ -73,6 +73,6 @@ right.rect(0.0, 0.0, 420.0, 48.0, 0.0, 0.0, 0.0, 0.5).text(18.0, 34.0, "KEYSTONE
 img.panel(left, right, 20).save("images/perspective_whiteboard.png");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/perspective_whiteboard.png");

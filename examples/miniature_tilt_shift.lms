@@ -58,6 +58,6 @@ img.panel(aerial, mini, 20).save("images/miniature_tilt_shift.png");
 img.print("PSNR to original: focus band " + str(psnr_band) + " dB, top band " + str(psnr_top) + " dB");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/miniature_tilt_shift.png");

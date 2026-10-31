@@ -38,6 +38,6 @@ let im = img.montage().add(noisy).add(gaussian).add(median).render(3, 15, 0.85, 
 im.save("images/salt_pepper_denoise.png");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/salt_pepper_denoise.png");

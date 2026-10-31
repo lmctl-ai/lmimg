@@ -42,6 +42,6 @@ img.panel(art, preview, 20).save("images/watermark_tiled.png");
 img.print("watermark PSNR " + str(psnr) + " dB, marked pixel fraction " + str(diff.mean(0)));
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/watermark_tiled.png");

@@ -72,7 +72,7 @@ panel.save("images/comparison.png");
 img.assert_close(original.ssim(original), 1.0, 0.000001);
 end _lmcode_
 savedsl(p, "comparison.dslb");
-r = system ${dsl_cli(p)} --dsl comparison.dslb;
+r = system ${dsl_cli(p)} --lmcode comparison.dslb;
 assert(r.code == 0);
 ```
 
@@ -97,7 +97,7 @@ All image edits mutate their receiver and return it for chaining; use `copy()` f
 
 Blend and layer modes: `over`, `multiply`, `screen`, `overlay`, `difference`, `darken`, `lighten`, `addition`, `subtract`, `divide` (straight-alpha source-over, opacity applied to the source alpha). Colormaps: `gray`, `heat`, `viridis`, `coolwarm`. Selections are rectangular: `selection(x,y,w,h)` clears alpha outside; use an image mask for other shapes. Morphology radii are 0–16. `img.hald(level)` builds an identity Hald CLUT of side `level^3` (2–16); grade it with any colour operation, save it, and `clut()` applies it with trilinear interpolation. `curves_rgb`, `threshold`, `invert`, `normalize`, `equalize`, `colormap`, `clut`, `hald`, `text_width`, the `divide` mode and the `hash`/`noise` expression functions are new in 0.1.2.
 
-`lmimg --dsl-signatures` lists exact parameter types; `--dsl-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM (PPM/PGM/PBM) are the supported local raster formats. Animated output is GIF with centisecond delays; `open` reads the first frame of an animated input. Text is ASCII in the embedded Roboto font. Comparison needs equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM is one global luma window with sample covariance and constants 0.01² and 0.03², a compact statistic rather than a multiscale perceptual model.
+`lmimg --lmcode-signatures` lists exact parameter types; `--lmcode-schema --json` prints the compiler schema. PNG, JPEG, TIFF, WebP, GIF, BMP and PNM (PPM/PGM/PBM) are the supported local raster formats. Animated output is GIF with centisecond delays; `open` reads the first frame of an animated input. Text is ASCII in the embedded Roboto font. Comparison needs equal dimensions. PSNR compares normalized RGBA and is positive infinity for identical images. SSIM is one global luma window with sample covariance and constants 0.01² and 0.03², a compact statistic rather than a multiscale perceptual model.
 
 ## Examples
 
@@ -153,11 +153,11 @@ lmimg is a scripting host with a small, original MIT implementation of editing i
 The default total memory budget is **4096 MiB**; set `LMIMG_MAX_MEMORY_MB` to a positive whole number of MiB to change it (invalid values exit 2). The host counts C++ allocations and conservatively charges native image storage, checking known temporary peaks before allocation. Exceeding the budget exits 3 with a JSON error on stdout and one stderr line naming `LMIMG_MAX_MEMORY_MB`.
 
 ```text
-lmimg --dsl FILE [FILE ...] [--dry-run]
+lmimg --lmcode FILE [FILE ...] [--dry-run]
 lmimg --version
 lmimg --notices
-lmimg --dsl-schema [--json]
-lmimg --dsl-signatures
+lmimg --lmcode-schema [--json]
+lmimg --lmcode-signatures
 ```
 
 Usage errors exit 2; bytecode-load and execution failures exit 3 with JSON on stdout and a diagnostic on stderr. A dry run verifies bytecode without running image operations.

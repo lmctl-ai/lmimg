@@ -42,6 +42,6 @@ im.save("images/contact_sheet_shoot.png");
 img.print("contact sheet 3 x 2, caption balance " + str(left.mean(0)) + " vs " + str(right.mean(0)));
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/contact_sheet_shoot.png");

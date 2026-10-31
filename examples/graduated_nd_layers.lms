@@ -45,6 +45,6 @@ img.panel(shot, edited, 20).save("images/graduated_nd_layers.png");
 img.print("sky green " + str(sky_before.mean(1)) + " -> " + str(sky_after.mean(1)));
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/graduated_nd_layers.png");

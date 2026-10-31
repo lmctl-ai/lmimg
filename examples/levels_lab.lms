@@ -15,7 +15,7 @@ img.assert_true(im.height() == 520);
 im.save("images/levels_lab.png");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 
 print("images/levels_lab.png");

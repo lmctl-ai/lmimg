@@ -26,7 +26,7 @@ img.panel(fog, clear, 4).save("build/hist_panel.png");
 img.print("green stddev " + str(fog.stddev(1)) + " -> " + str(clear.stddev(1)));
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 
 plot = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -49,7 +49,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(plot, "build/hist_chart.dslb");
-r = system ${dsl_cli(plot)} --dsl build/hist_chart.dslb;
+r = system ${dsl_cli(plot)} --lmcode build/hist_chart.dslb;
 assert(r.code == 0);
 
 q = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
@@ -61,6 +61,6 @@ page.blend(top, "over", 1.0, 0, 0).blend(chart, "over", 1.0, 0, 288);
 page.save("images/histogram_equalize_plot.png");
 end _lmcode_
 savedsl(q, "build/hist_page.dslb");
-r = system ${dsl_cli(q)} --dsl build/hist_page.dslb;
+r = system ${dsl_cli(q)} --lmcode build/hist_page.dslb;
 assert(r.code == 0);
 print("images/histogram_equalize_plot.png");

@@ -14,7 +14,7 @@ img.assert_true(im.height() == 520);
 im.save("images/gradient_studio.png");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 
 print("images/gradient_studio.png");

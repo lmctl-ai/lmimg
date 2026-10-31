@@ -63,7 +63,7 @@ page.save("images/sprite_sheet.png");
 img.print("atlas " + str(sheet.width()) + "x" + str(sheet.height()) + ", GIF frames " + str(gif.size()));
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 print("images/sprite_sheet.png");
 print("images/sprite_sheet.gif");
