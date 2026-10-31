@@ -65,7 +65,7 @@ ev_zero.text(18.0, 34.0, "SINGLE EXPOSURE EV 0", 20.0, 1.0, 1.0, 1.0, 1.0);
 mapped.text(18.0, 34.0, "3 BRACKETS MERGED + TONE MAPPED", 20.0, 1.0, 1.0, 1.0, 1.0);
 img.panel(ev_zero, mapped, 20).save("images/hdr_tone_map.png");
 end _lmcode_
-
-r = run_lmcode(p);
-assert(r.ok, "lmcode host failed");
+savedsl(p, out);
+r = system ${dsl_cli(p)} --lmcode ${out};
+assert(r.code == 0);
 print("images/hdr_tone_map.png");

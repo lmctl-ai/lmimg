@@ -28,9 +28,9 @@ board.blend(triptych, "over", 1.0, 10, 20);
 board.save("images/batch_resize.png");
 img.assert_true(board.width() == 900 && board.height() == 520);
 end _lmcode_
-
-r = run_lmcode(p);
-assert(r.ok, "lmcode host failed");
+savedsl(p, out);
+r = system ${dsl_cli(p)} --lmcode ${out};
+assert(r.code == 0);
 print("images/batch_resize.png");
 print("images/batch_small.png");
 print("images/batch_medium.png");

@@ -11,7 +11,7 @@ mark.text(42.0, 54.0, "PROCEDURAL ARCHIVE", 20.0, 1.0, 1.0, 1.0, 0.82);
 base.blend(mark, "over", 1.0, 0, 0);
 base.save("images/watermark_story.png");
 end _lmcode_
-
-r = run_lmcode(p);
-assert(r.ok, "lmcode host failed");
+savedsl(p, out);
+r = system ${dsl_cli(p)} --lmcode ${out};
+assert(r.code == 0);
 print("images/watermark_story.png");
