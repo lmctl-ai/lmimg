@@ -62,8 +62,8 @@ page.text(30.0, 48.0, "SPRITE ATLAS  8 frames  110 x 110 px cells  squash and st
 page.save("images/sprite_sheet.png");
 img.print("atlas " + str(sheet.width()) + "x" + str(sheet.height()) + ", GIF frames " + str(gif.size()));
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+
+r = run_lmcode(p);
+assert(r.ok, "lmcode host failed");
 print("images/sprite_sheet.png");
 print("images/sprite_sheet.gif");
