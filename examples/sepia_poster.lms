@@ -1,4 +1,3 @@
-out = ARGV.len() > 0 ? ARGV[0] : "sepia_poster.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 let before = img.canvas(420, 480, 0.12, 0.08, 0.18, 1.0);
@@ -13,8 +12,7 @@ img.assert_true(im.width() == 900);
 img.assert_true(im.height() == 520);
 im.save("images/sepia_poster.png");
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 
 print("images/sepia_poster.png");

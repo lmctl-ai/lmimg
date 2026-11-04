@@ -2,7 +2,6 @@
 # per channel, hue and saturation), baked into a Hald CLUT image, saved as a
 # PNG, and then applied to two different shots with a single clut() call.
 # The LUT result is checked against grading the shot directly.
-out = ARGV.len() > 0 ? ARGV[0] : "color_grade_lut.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 # the look: lift blues in the shadows, push warmth into highlights, add contrast
@@ -52,7 +51,6 @@ im.resize(900, 520);
 im.save("images/color_grade_lut.png");
 img.print("LUT vs direct grade PSNR " + str(street_lut.psnr(street_direct)) + " dB");
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 print("images/color_grade_lut.png");

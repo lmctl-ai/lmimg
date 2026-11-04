@@ -2,7 +2,6 @@
 # photo clean-up is rendered by lmimg as a thumbnail, lmdraw draws the
 # flow diagram (boxes, arrows, stage labels and the measured numbers) on a
 # transparent canvas, and lmimg composes both into one figure.
-out = ARGV.len() > 0 ? ARGV[0] : "pipeline_diagram.dslb";
 mkdir("images");
 mkdir("build/rendered");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
@@ -27,9 +26,8 @@ s3.save("build/stage3.png");
 s4.save("build/stage4.png");
 img.print("mean " + str(mean0) + " -> " + str(mean3) + ", edge noise " + str(noise1) + " -> " + str(noise2));
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 520, "#f8fafc");
@@ -59,9 +57,8 @@ scene.text(50.0, 444.0, 12.5, "median: edge energy (grain) falls while the mug o
 scene.text(50.0, 466.0, 12.5, "The same script asserts these on every run, so the figure cannot drift from the pipeline it documents.", "#1e40af");
 scene.render_png("build/rendered/pipeline_overlay.png", 900, 520, 1);
 end _lmcode_
-savedsl(draw, "build/pipeline_overlay.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/pipeline_overlay.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 
 q = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 let page = img.open("build/rendered/pipeline_overlay.png");
@@ -72,7 +69,6 @@ page.blend(img.open("build/stage3.png"), "over", 1.0, 469, 113);
 page.blend(img.open("build/stage4.png"), "over", 1.0, 687, 113);
 page.save("images/pipeline_diagram.png");
 end _lmcode_
-savedsl(q, "build/pipeline_page.dslb");
-r = system ${dsl_cli(q)} --lmcode build/pipeline_page.dslb;
-assert(r.code == 0);
+r = run_lmcode(q);
+assert(r.ok);
 print("images/pipeline_diagram.png");

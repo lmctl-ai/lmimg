@@ -1,7 +1,6 @@
 # Contact sheet for a product shoot: six frames of the same set-up at
 # different exposures and white balances, each tile captioned with the frame
 # name and settings, laid out 3 x 2 with centred captions (img.text_width).
-out = ARGV.len() > 0 ? ARGV[0] : "contact_sheet_shoot.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 # the set: a bottle on a lit table top
@@ -41,7 +40,6 @@ img.assert_close(left.mean(0), right.mean(0), 0.03);
 im.save("images/contact_sheet_shoot.png");
 img.print("contact sheet 3 x 2, caption balance " + str(left.mean(0)) + " vs " + str(right.mean(0)));
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 print("images/contact_sheet_shoot.png");

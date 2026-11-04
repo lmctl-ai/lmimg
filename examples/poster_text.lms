@@ -2,7 +2,6 @@
 # (img.text_width), a soft drop shadow made by blurring a transparent text
 # layer, a textured gradient background and a date pill. The centring is
 # verified by measuring the ink extent of the title.
-out = ARGV.len() > 0 ? ARGV[0] : "poster_text.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 let bg = img.pattern(900, 520,
@@ -46,7 +45,6 @@ img.assert_close(leftink.mean(0), rightink.mean(0), 0.01);
 bg.save("images/poster_text.png");
 img.print("title ink balance left " + str(leftink.mean(0)) + " right " + str(rightink.mean(0)));
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 print("images/poster_text.png");

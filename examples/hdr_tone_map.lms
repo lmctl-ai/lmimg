@@ -2,7 +2,6 @@
 # dynamic range than one 8-bit exposure. Three brackets (EV -2, 0, +2) of the
 # same linear scene are merged and tone-mapped so both the view through the
 # window and the shadowed furniture keep detail.
-out = ARGV.len() > 0 ? ARGV[0] : "hdr_tone_map.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 # Draw the scene at a given exposure gain. Colors are linear radiance * gain and
@@ -65,7 +64,6 @@ ev_zero.text(18.0, 34.0, "SINGLE EXPOSURE EV 0", 20.0, 1.0, 1.0, 1.0, 1.0);
 mapped.text(18.0, 34.0, "3 BRACKETS MERGED + TONE MAPPED", 20.0, 1.0, 1.0, 1.0, 1.0);
 img.panel(ev_zero, mapped, 20).save("images/hdr_tone_map.png");
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 print("images/hdr_tone_map.png");

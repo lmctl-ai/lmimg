@@ -2,7 +2,6 @@
 # (a gradient-masked darkening layer) brings back a blown-out sky, a
 # multiply layer deepens the foreground and a screen layer adds the sun's
 # glow. The stack is rendered with img.layers, the GIMP-style way.
-out = ARGV.len() > 0 ? ARGV[0] : "graduated_nd_layers.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 # the shot: pale over-exposed sky, dark hills, a lake with ripples
@@ -44,7 +43,6 @@ edited.text(18.0, 34.0, "ND GRAD + MULTIPLY + SCREEN LAYERS", 18.0, 1.0, 1.0, 1.
 img.panel(shot, edited, 20).save("images/graduated_nd_layers.png");
 img.print("sky green " + str(sky_before.mean(1)) + " -> " + str(sky_after.mean(1)));
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 print("images/graduated_nd_layers.png");

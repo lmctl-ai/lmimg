@@ -71,9 +71,8 @@ let panel = img.panel(original, edited, 4);
 panel.save("images/comparison.png");
 img.assert_close(original.ssim(original), 1.0, 0.000001);
 end _lmcode_
-savedsl(p, "comparison.dslb");
-r = system ${dsl_cli(p)} --lmcode comparison.dslb;
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 ```
 
 All image edits mutate their receiver and return it for chaining; use `copy()` first when the original must survive. Dimensions and coordinates are pixels; RGBA channels are normalized to `[0,1]` and stored as 8 bits per channel. `pattern` expressions use normalized `x`, `y`, the arithmetic and functions in the expression note, plus `hash(x,y,seed)` (white noise) and `noise(x,y,seed)` (smooth value noise) for procedural textures.

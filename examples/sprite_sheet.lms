@@ -1,7 +1,6 @@
 # Sprite sheet for a game: eight frames of a bouncing ball with squash and
 # stretch and a blurred contact shadow, packed into a 4 x 2 atlas with fixed
 # cells, plus the same frames as a looping GIF.
-out = ARGV.len() > 0 ? ARGV[0] : "sprite_sheet.dslb";
 mkdir("images");
 p = _lmcode_ cli="lmimg" install="github:lmctl-ai/lmimg@latest";
 let cell = 110;
@@ -62,8 +61,7 @@ page.text(30.0, 48.0, "SPRITE ATLAS  8 frames  110 x 110 px cells  squash and st
 page.save("images/sprite_sheet.png");
 img.print("atlas " + str(sheet.width()) + "x" + str(sheet.height()) + ", GIF frames " + str(gif.size()));
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 print("images/sprite_sheet.png");
 print("images/sprite_sheet.gif");
